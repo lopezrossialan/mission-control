@@ -1,0 +1,9 @@
+{
+    "github.copilot.chat.codeGeneration.instructions": [
+        {
+            "file": ".github/copilot-instructions.md"
+        }
+    ],
+    "github.copilot.chat.agent.thinkingTool": true,
+    "editor.formatOnSave": true
+}
