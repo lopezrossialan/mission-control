@@ -52,53 +52,12 @@
         </div>
 
         <div class="workflow-section">
-            <div class="workflow">
-                <!-- Paso 1 -->
-                <div class="workflow-step">
-                    <div class="step-num">1</div>
-                    <div>
-                        <div class="step-name">📄 Doc Interpreter</div>
-                        <div class="step-desc">Interpretá el documento funcional</div>
-                    </div>
-                </div>
-                <div class="workflow-arrow">→</div>
-                <!-- Paso 2: rama de generadores -->
-                <div class="workflow-branch">
-                    <div class="workflow-step">
-                        <div class="step-num">2A</div>
-                        <div>
-                            <div class="step-name">🧪 Test Case General</div>
-                            <div class="step-desc">Casos en formato tabla Markdown</div>
-                        </div>
-                    </div>
-                    <div class="workflow-step">
-                        <div class="step-num">2B</div>
-                        <div>
-                            <div class="step-name">🥒 Test Case Gherkin</div>
-                            <div class="step-desc">Casos en formato BDD .feature</div>
-                        </div>
-                    </div>
-                    <div class="workflow-step">
-                        <div class="step-num">2C</div>
-                        <div>
-                            <div class="step-name">🎭 Playwright Agent</div>
-                            <div class="step-desc">Tests E2E en TypeScript .spec.ts</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="workflow-arrow">→</div>
-                <!-- Paso 3 -->
-                <div class="workflow-step">
-                    <div class="step-num">3</div>
-                    <div>
-                        <div class="step-name">📁 /outputs/</div>
-                        <div class="step-desc">Guardá los resultados generados</div>
-                    </div>
-                </div>
+            <div class="workflow" id="workflow-inner">
+                <!-- generado dinámicamente por renderWorkflow() -->
             </div>
             <div class="workflow-note">
-                💡 El <strong>Doc Interpreter</strong> es opcional — podés alimentar cualquier agente directamente con
-                texto o adjuntando un <strong>.doc/.docx</strong>
+                💡 Hacé click en un paso del flujo para abrir el chat directamente.
+                También podés adjuntar un <strong>.doc/.docx</strong> desde cualquier agente.
             </div>
         </div>
 

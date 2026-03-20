@@ -59,7 +59,59 @@ function updateHeaderCounts() {
         const allSkills = new Set(AGENTS.flatMap(a => a.skills || []));
         skillsEl.textContent = allSkills.size;
     }
+    renderWorkflow();
 }
+
+function renderWorkflow() {
+    const el = document.getElementById("workflow-inner");
+    if (!el) return;
+    if (AGENTS.length === 0) {
+        el.innerHTML = `<p style="font-family:var(--mono);font-size:12px;color:var(--text-muted);padding:12px 0">
+            ℹ️ Activá agentes desde ⚙️ Gestionar Agentes para ver el flujo.</p>`;
+        return;
+    }
+    const firstAgents = AGENTS.filter(a => (a.flow || "").toUpperCase().includes("PRIMER"));
+    const secondAgents = AGENTS.filter(a => !(a.flow || "").toUpperCase().includes("PRIMER"));
+
+    const makeStep = (agent, label) => `
+        <div class="workflow-step" onclick="openChat('${agent.id}')" title="Abrir chat" style="cursor:pointer">
+            <div class="step-num">${label}</div>
+            <div>
+                <div class="step-name">${agent.icon} ${agent.name}</div>
+                <div class="step-desc">${agent.flow || agent.description.slice(0, 50)}</div>
+            </div>
+        </div>`;
+
+    let html = "";
+
+    if (firstAgents.length > 0) {
+        if (firstAgents.length === 1) {
+            html += makeStep(firstAgents[0], "1");
+        } else {
+            html += `<div class="workflow-branch">${firstAgents.map((a, i) => makeStep(a, `1${String.fromCharCode(65 + i)}`)).join("")}</div>`;
+        }
+        if (secondAgents.length > 0) html += `<div class="workflow-arrow">→</div>`;
+    }
+
+    if (secondAgents.length === 1) {
+        html += makeStep(secondAgents[0], firstAgents.length > 0 ? "2" : "1");
+    } else if (secondAgents.length > 1) {
+        const offset = firstAgents.length > 0 ? 2 : 1;
+        html += `<div class="workflow-branch">${secondAgents.map((a, i) => makeStep(a, `${offset}${String.fromCharCode(65 + i)}`)).join("")}</div>`;
+    }
+
+    html += `<div class="workflow-arrow">→</div>
+        <div class="workflow-step">
+            <div class="step-num">${secondAgents.length > 0 ? (firstAgents.length > 0 ? "3" : "2") : "2"}</div>
+            <div>
+                <div class="step-name">📁 /outputs/</div>
+                <div class="step-desc">Guardá los resultados generados</div>
+            </div>
+        </div>`;
+
+    el.innerHTML = html;
+}
+
 
 // ─── Gestionar Agentes ───────────────────────────────────────────────
 
@@ -101,9 +153,11 @@ function renderManageModal() {
         ? `<p class="manage-empty">❌ No se detectaron agentes. ¿Está corriendo el servidor?</p>`
         : _allAgents.map(agent => {
             const sourceName = agent.isDefault ? "integrado" : (agent.sourceDir || "").replace(/\\/g, "/").split("/").pop();
+            // Double-escape backslashes so el string JS en onclick sea correcto en Windows
+            const safeFile = (agent.agentFile || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
             const importBtn = !agent.isDefault
-                ? `<button class="btn-agent-import" onclick="importAgent('${agent.id}', '${escapeHtml(agent.agentFile).replace(/'/g, "\\'")}')"
-                          title="Copiar a agents/ local para usar sin dep\u00e4ender de la ruta externa">
+                ? `<button class="btn-agent-import" onclick="importAgent('${agent.id}', '${safeFile}')"
+                          title="Copiar a agents/ local para usar sin depender de la ruta externa">
                        ⬇️ Importar
                    </button>`
                 : "";
