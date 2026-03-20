@@ -119,40 +119,106 @@ function parseFrontmatter(content) {
     return { data, body: match[2] };
 }
 
-// Listar agentes disponibles leyendo agents/ desde disco
-app.get("/api/agents", (req, res) => {
-    const agentsDir = path.join(__dirname, "agents");
-    const result = [];
+// ─── Rutas de agentes extra ─────────────────────────────────────────────
+const EXTRA_DIRS_FILE = path.join(__dirname, "config", "agent-dirs.json");
+
+function readExtraDirs() {
     try {
-        const folders = fs.readdirSync(agentsDir, { withFileTypes: true })
-            .filter(d => d.isDirectory())
-            .map(d => d.name);
-        for (const folder of folders) {
-            const agentFile = path.join(agentsDir, folder, `${folder}.agent.md`);
-            const promptFile = path.join(agentsDir, folder, `${folder}.prompt.md`);
-            if (!fs.existsSync(agentFile)) continue;
-            const { data } = parseFrontmatter(fs.readFileSync(agentFile, "utf8"));
-            let promptBody = "";
-            if (fs.existsSync(promptFile)) {
-                const { body } = parseFrontmatter(fs.readFileSync(promptFile, "utf8"));
-                promptBody = body.trim();
-            }
-            result.push({
-                id: data.id || folder,
-                name: data.name || folder,
-                version: data.version || "1.0.0",
-                description: data.description || "",
-                skills: Array.isArray(data.skills) ? data.skills : [],
-                icon: data.icon || "\uD83E\uDD16",
-                flow: data.flow || "",
-                hint: data.hint || "Peg\u00E1 el contenido del documento aqu\u00ED.",
-                prompt: promptBody,
-            });
+        if (fs.existsSync(EXTRA_DIRS_FILE)) {
+            return JSON.parse(fs.readFileSync(EXTRA_DIRS_FILE, "utf8"));
         }
-        res.json({ agents: result });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+    } catch (_) { }
+    return [];
+}
+
+function writeExtraDirs(dirs) {
+    const dir = path.dirname(EXTRA_DIRS_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(EXTRA_DIRS_FILE, JSON.stringify(dirs, null, 2), "utf8");
+}
+
+function getAllAgentDirs() {
+    return [path.join(__dirname, "agents"), ...readExtraDirs()];
+}
+
+function findAgentPromptFile(agentId) {
+    for (const dir of getAllAgentDirs()) {
+        const f = path.join(dir, agentId, `${agentId}.prompt.md`);
+        if (fs.existsSync(f)) return f;
     }
+    return null;
+}
+
+app.get("/api/agent-dirs", (req, res) => {
+    res.json({ dirs: readExtraDirs() });
+});
+
+app.post("/api/agent-dirs", (req, res) => {
+    const { dir } = req.body;
+    if (!dir || typeof dir !== "string") return res.status(400).json({ error: "dir requerido" });
+    const normalized = path.normalize(dir.trim());
+    if (!path.isAbsolute(normalized)) return res.status(400).json({ error: "Debe ser una ruta absoluta" });
+    if (!fs.existsSync(normalized) || !fs.statSync(normalized).isDirectory()) {
+        return res.status(400).json({ error: "La ruta no existe o no es una carpeta" });
+    }
+    const existing = readExtraDirs();
+    if (existing.includes(normalized)) return res.status(400).json({ error: "La ruta ya está registrada" });
+    existing.push(normalized);
+    writeExtraDirs(existing);
+    res.json({ ok: true, dirs: existing });
+});
+
+app.delete("/api/agent-dirs", (req, res) => {
+    const { dir } = req.body;
+    if (!dir) return res.status(400).json({ error: "dir requerido" });
+    const normalized = path.normalize(dir.trim());
+    const updated = readExtraDirs().filter(d => d !== normalized);
+    writeExtraDirs(updated);
+    res.json({ ok: true, dirs: updated });
+});
+
+// Listar agentes disponibles leyendo todas las rutas configuradas
+app.get("/api/agents", (req, res) => {
+    const defaultDir = path.join(__dirname, "agents");
+    const allDirs = getAllAgentDirs();
+    const result = [];
+    const seenIds = new Set();
+    for (const agentsDir of allDirs) {
+        if (!fs.existsSync(agentsDir)) continue;
+        try {
+            const folders = fs.readdirSync(agentsDir, { withFileTypes: true })
+                .filter(d => d.isDirectory())
+                .map(d => d.name);
+            for (const folder of folders) {
+                const agentFile = path.join(agentsDir, folder, `${folder}.agent.md`);
+                const promptFile = path.join(agentsDir, folder, `${folder}.prompt.md`);
+                if (!fs.existsSync(agentFile)) continue;
+                const { data } = parseFrontmatter(fs.readFileSync(agentFile, "utf8"));
+                const agentId = data.id || folder;
+                if (seenIds.has(agentId)) continue;
+                seenIds.add(agentId);
+                let promptBody = "";
+                if (fs.existsSync(promptFile)) {
+                    const { body } = parseFrontmatter(fs.readFileSync(promptFile, "utf8"));
+                    promptBody = body.trim();
+                }
+                result.push({
+                    id: agentId,
+                    name: data.name || folder,
+                    version: data.version || "1.0.0",
+                    description: data.description || "",
+                    skills: Array.isArray(data.skills) ? data.skills : [],
+                    icon: data.icon || "\uD83E\uDD16",
+                    flow: data.flow || "",
+                    hint: data.hint || "Peg\u00E1 el contenido del documento aqu\u00ED.",
+                    prompt: promptBody,
+                    sourceDir: agentsDir,
+                    isDefault: agentsDir === defaultDir,
+                });
+            }
+        } catch (_) { }
+    }
+    res.json({ agents: result });
 });
 
 app.post("/api/chat", async (req, res) => {
@@ -163,8 +229,8 @@ app.post("/api/chat", async (req, res) => {
     }
 
     const systemPrompt = AGENT_SYSTEM_PROMPTS[agentId] || (() => {
-        const promptFile = path.join(__dirname, "agents", agentId, `${agentId}.prompt.md`);
-        if (fs.existsSync(promptFile)) {
+        const promptFile = findAgentPromptFile(agentId);
+        if (promptFile) {
             const { body } = parseFrontmatter(fs.readFileSync(promptFile, "utf8"));
             return body.trim();
         }

@@ -20,6 +20,7 @@ let quotaFetching = false;
 
 let AGENTS = [];
 let _allAgents = [];
+let _extraDirs = [];
 
 // ─── Carga dinámica de agentes ─────────────────────────────────────────────
 
@@ -58,32 +59,130 @@ function updateHeaderCounts() {
 
 // ─── Gestionar Agentes ───────────────────────────────────────────────
 
-function openManageModal() {
+async function openManageModal() {
+    document.getElementById("manage-modal").style.display = "flex";
+    try {
+        const res = await fetch(`${API_BASE}/agent-dirs`);
+        const data = await res.json();
+        _extraDirs = data.dirs || [];
+    } catch (_) { _extraDirs = []; }
+    renderManageModal();
+}
+
+function renderManageModal() {
     const stored = localStorage.getItem("mc-active-agents");
     const activeIds = stored ? new Set(JSON.parse(stored)) : new Set(_allAgents.map(a => a.id));
 
-    const list = document.getElementById("manage-agents-list");
-    if (_allAgents.length === 0) {
-        list.innerHTML = `<p class="manage-empty">❌ No se detectaron agentes. ¿Está corriendo el servidor?</p>`;
-    } else {
-        list.innerHTML = _allAgents.map(agent => `
+    const dirsHtml = `
+        <div class="manage-section-title">📁 Rutas de búsqueda</div>
+        <div class="manage-dir-row">
+            <span class="dir-path dir-default">agents/ &nbsp;<em>(carpeta integrada del proyecto)</em></span>
+            <span class="dir-badge">integrada</span>
+        </div>
+        ${_extraDirs.map((d, i) => `
+        <div class="manage-dir-row">
+            <span class="dir-path" title="${escapeHtml(d)}">${escapeHtml(d)}</span>
+            <button class="dir-remove-btn" onclick="removeAgentDirByIndex(${i})" title="Quitar ruta">✕</button>
+        </div>`).join("")}
+        <div class="manage-dir-add">
+            <input type="text" id="new-dir-input"
+                   placeholder="C:\\ruta\\a\\tus\\agentes"
+                   autocomplete="off"
+                   onkeydown="if(event.key==='Enter') addAgentDir()" />
+            <button class="btn-dir-add" onclick="addAgentDir()">➕ Agregar ruta</button>
+        </div>
+        <div id="dir-add-error" class="dir-add-error" style="display:none"></div>`;
+
+    const agentsHtml = _allAgents.length === 0
+        ? `<p class="manage-empty">❌ No se detectaron agentes. ¿Está corriendo el servidor?</p>`
+        : _allAgents.map(agent => {
+            const sourceName = agent.isDefault ? "integrado" : (agent.sourceDir || "").replace(/\\/g, "/").split("/").pop();
+            return `
             <div class="manage-agent-row">
                 <div class="mar-info">
                     <span class="mar-icon">${agent.icon}</span>
                     <div class="mar-meta">
-                        <div class="mar-name">${agent.name}</div>
+                        <div class="mar-name">${agent.name}
+                            <span class="mar-source ${agent.isDefault ? "source-default" : "source-external"}">${sourceName}</span>
+                        </div>
                         <div class="mar-desc">${agent.description}</div>
                         <div class="mar-id">${agent.id}.agent.md · v${agent.version}</div>
                     </div>
                 </div>
-                <label class="toggle-switch" title="${activeIds.has(agent.id) ? 'Desactivar' : 'Activar'} agente">
+                <label class="toggle-switch" title="${activeIds.has(agent.id) ? "Desactivar" : "Activar"} agente">
                     <input type="checkbox" ${activeIds.has(agent.id) ? "checked" : ""}
                            onchange="toggleAgentActive('${agent.id}', this.checked)">
                     <span class="toggle-slider"></span>
                 </label>
-            </div>`).join("");
+            </div>`;
+        }).join("");
+
+    document.getElementById("manage-modal-body").innerHTML = `
+        <div class="manage-dirs-section">${dirsHtml}</div>
+        <div class="manage-agents-section">
+            <div class="manage-section-title" style="margin-top:20px;justify-content:space-between">
+                <span>🤖 Agentes detectados <span class="manage-agents-count">${_allAgents.length}</span></span>
+                <button class="btn-refresh-agents" onclick="refreshManageAgents()">🔄 Actualizar</button>
+            </div>
+            <div id="manage-agents-list">${agentsHtml}</div>
+        </div>`;
+}
+
+async function refreshManageAgents() {
+    const btn = document.querySelector(".btn-refresh-agents");
+    if (btn) { btn.disabled = true; btn.textContent = "⏳ Actualizando..."; }
+    await loadAgents();
+    try {
+        const res = await fetch(`${API_BASE}/agent-dirs`);
+        const data = await res.json();
+        _extraDirs = data.dirs || [];
+    } catch (_) { }
+    renderManageModal();
+}
+
+async function addAgentDir() {
+    const input = document.getElementById("new-dir-input");
+    const errorEl = document.getElementById("dir-add-error");
+    if (!input) return;
+    const dir = input.value.trim();
+    if (!dir) return;
+    errorEl.style.display = "none";
+    try {
+        const res = await fetch(`${API_BASE}/agent-dirs`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ dir }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            errorEl.textContent = `❌ ${data.error}`;
+            errorEl.style.display = "block";
+            return;
+        }
+        _extraDirs = data.dirs;
+        input.value = "";
+        await refreshManageAgents();
+    } catch {
+        errorEl.textContent = "❌ No se pudo conectar con el servidor";
+        errorEl.style.display = "block";
     }
-    document.getElementById("manage-modal").style.display = "flex";
+}
+
+async function removeAgentDirByIndex(index) {
+    const dir = _extraDirs[index];
+    if (!dir) return;
+    try {
+        const res = await fetch(`${API_BASE}/agent-dirs`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ dir }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+            _extraDirs = data.dirs;
+            await refreshManageAgents();
+        }
+    } catch (_) { }
 }
 
 function handleManageOverlayClick(e) {

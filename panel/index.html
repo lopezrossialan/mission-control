@@ -170,13 +170,8 @@
                 <h3>⚙️ Gestionar Agentes</h3>
                 <button class="modal-close" onclick="closeManageModal()">✕</button>
             </div>
-            <div class="modal-body">
-                <p class="manage-hint">
-                    Los agentes se detectan automáticamente desde la carpeta <code>agents/</code>.
-                    Activá o desactivá cuáles se muestran en el panel. Para agregar uno nuevo,
-                    creá su carpeta en VS Code y reiniciá el servidor.
-                </p>
-                <div id="manage-agents-list"></div>
+            <div class="modal-body" id="manage-modal-body">
+                <!-- generado dinámicamente por renderManageModal() -->
             </div>
         </div>
     </div>
