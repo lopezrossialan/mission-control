@@ -97,8 +97,14 @@ function renderManageModal() {
         ? `<p class="manage-empty">❌ No se detectaron agentes. ¿Está corriendo el servidor?</p>`
         : _allAgents.map(agent => {
             const sourceName = agent.isDefault ? "integrado" : (agent.sourceDir || "").replace(/\\/g, "/").split("/").pop();
+            const importBtn = !agent.isDefault
+                ? `<button class="btn-agent-import" onclick="importAgent('${agent.id}', '${escapeHtml(agent.agentFile).replace(/'/g, "\\'")}')"
+                          title="Copiar a agents/ local para usar sin dep\u00e4ender de la ruta externa">
+                       ⬇️ Importar
+                   </button>`
+                : "";
             return `
-            <div class="manage-agent-row">
+            <div class="manage-agent-row" id="mar-${agent.id}">
                 <div class="mar-info">
                     <span class="mar-icon">${agent.icon}</span>
                     <div class="mar-meta">
@@ -109,11 +115,14 @@ function renderManageModal() {
                         <div class="mar-id">${agent.id}.agent.md · v${agent.version}</div>
                     </div>
                 </div>
-                <label class="toggle-switch" title="${activeIds.has(agent.id) ? "Desactivar" : "Activar"} agente">
-                    <input type="checkbox" ${activeIds.has(agent.id) ? "checked" : ""}
-                           onchange="toggleAgentActive('${agent.id}', this.checked)">
-                    <span class="toggle-slider"></span>
-                </label>
+                <div class="mar-actions">
+                    ${importBtn}
+                    <label class="toggle-switch" title="${activeIds.has(agent.id) ? "Desactivar" : "Activar"} agente">
+                        <input type="checkbox" ${activeIds.has(agent.id) ? "checked" : ""}
+                               onchange="toggleAgentActive('${agent.id}', this.checked)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
             </div>`;
         }).join("");
 
@@ -126,6 +135,30 @@ function renderManageModal() {
             </div>
             <div id="manage-agents-list">${agentsHtml}</div>
         </div>`;
+}
+
+async function importAgent(agentId, agentFile) {
+    const row = document.getElementById(`mar-${agentId}`);
+    const btn = row ? row.querySelector(".btn-agent-import") : null;
+    if (btn) { btn.disabled = true; btn.textContent = "⏳ Importando..."; }
+    try {
+        const res = await fetch(`${API_BASE}/agents/import`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ agentId, agentFile }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            showToast(`❌ ${data.error}`);
+            if (btn) { btn.disabled = false; btn.textContent = "⬇️ Importar"; }
+            return;
+        }
+        showToast(`✅ ${agentId} importado a agents/`);
+        await refreshManageAgents();
+    } catch {
+        showToast("❌ No se pudo conectar con el servidor");
+        if (btn) { btn.disabled = false; btn.textContent = "⬇️ Importar"; }
+    }
 }
 
 async function refreshManageAgents() {

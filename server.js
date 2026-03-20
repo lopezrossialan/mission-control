@@ -141,13 +141,49 @@ function getAllAgentDirs() {
     return [path.join(__dirname, "agents"), ...readExtraDirs()];
 }
 
+// Busca el archivo de prompt/system de un agente en todas las rutas (subfolder y plano)
 function findAgentPromptFile(agentId) {
     for (const dir of getAllAgentDirs()) {
-        const f = path.join(dir, agentId, `${agentId}.prompt.md`);
-        if (fs.existsSync(f)) return f;
+        // Estructura subfolder: agents/{id}/{id}.prompt.md
+        const promptInSubfolder = path.join(dir, agentId, `${agentId}.prompt.md`);
+        if (fs.existsSync(promptInSubfolder)) return promptInSubfolder;
+        // Subfolder sin .prompt.md: usa el .agent.md
+        const agentInSubfolder = path.join(dir, agentId, `${agentId}.agent.md`);
+        if (fs.existsSync(agentInSubfolder)) return agentInSubfolder;
+        // Estructura plana: agents/{id}.agent.md
+        const agentFlat = path.join(dir, `${agentId}.agent.md`);
+        if (fs.existsSync(agentFlat)) return agentFlat;
     }
     return null;
 }
+
+// Helper: leer agente desde un archivo .agent.md + opcional .prompt.md
+function readAgentFromFile(agentFile, promptFile, agentsDir, defaultDir) {
+    const { data, body } = parseFrontmatter(fs.readFileSync(agentFile, "utf8"));
+    const folder = path.basename(agentFile, ".agent.md");
+    const agentId = data.id || folder;
+    let promptBody = body.trim();
+    if (promptFile && fs.existsSync(promptFile)) {
+        const { body: pb } = parseFrontmatter(fs.readFileSync(promptFile, "utf8"));
+        promptBody = pb.trim();
+    }
+    return {
+        id: agentId,
+        name: data.name || folder,
+        version: data.version || "1.0.0",
+        description: data.description || "",
+        skills: Array.isArray(data.skills) ? data.skills : [],
+        icon: data.icon || "\uD83E\uDD16",
+        flow: data.flow || "",
+        hint: data.hint || "Peg\u00E1 el contenido del documento aqu\u00ED.",
+        prompt: promptBody,
+        sourceDir: agentsDir,
+        isDefault: agentsDir === defaultDir,
+        isFlat: true,
+        agentFile,
+    };
+}
+
 
 app.get("/api/agent-dirs", (req, res) => {
     res.json({ dirs: readExtraDirs() });
@@ -178,6 +214,7 @@ app.delete("/api/agent-dirs", (req, res) => {
 });
 
 // Listar agentes disponibles leyendo todas las rutas configuradas
+// Soporta: estructura subfolder ({id}/{id}.agent.md) y estructura plana ({id}.agent.md)
 app.get("/api/agents", (req, res) => {
     const defaultDir = path.join(__dirname, "agents");
     const allDirs = getAllAgentDirs();
@@ -186,21 +223,21 @@ app.get("/api/agents", (req, res) => {
     for (const agentsDir of allDirs) {
         if (!fs.existsSync(agentsDir)) continue;
         try {
-            const folders = fs.readdirSync(agentsDir, { withFileTypes: true })
-                .filter(d => d.isDirectory())
-                .map(d => d.name);
-            for (const folder of folders) {
+            const entries = fs.readdirSync(agentsDir, { withFileTypes: true });
+            // Estructura subfolder
+            for (const entry of entries.filter(e => e.isDirectory())) {
+                const folder = entry.name;
                 const agentFile = path.join(agentsDir, folder, `${folder}.agent.md`);
                 const promptFile = path.join(agentsDir, folder, `${folder}.prompt.md`);
                 if (!fs.existsSync(agentFile)) continue;
-                const { data } = parseFrontmatter(fs.readFileSync(agentFile, "utf8"));
+                const { data, body } = parseFrontmatter(fs.readFileSync(agentFile, "utf8"));
                 const agentId = data.id || folder;
                 if (seenIds.has(agentId)) continue;
                 seenIds.add(agentId);
-                let promptBody = "";
+                let promptBody = body.trim();
                 if (fs.existsSync(promptFile)) {
-                    const { body } = parseFrontmatter(fs.readFileSync(promptFile, "utf8"));
-                    promptBody = body.trim();
+                    const { body: pb } = parseFrontmatter(fs.readFileSync(promptFile, "utf8"));
+                    promptBody = pb.trim();
                 }
                 result.push({
                     id: agentId,
@@ -214,12 +251,72 @@ app.get("/api/agents", (req, res) => {
                     prompt: promptBody,
                     sourceDir: agentsDir,
                     isDefault: agentsDir === defaultDir,
+                    isFlat: false,
+                    agentFile: agentFile,
+                });
+            }
+            // Estructura plana: {id}.agent.md directo en la carpeta
+            for (const entry of entries.filter(e => e.isFile() && e.name.endsWith(".agent.md"))) {
+                const agentFile = path.join(agentsDir, entry.name);
+                const { data, body } = parseFrontmatter(fs.readFileSync(agentFile, "utf8"));
+                const folder = entry.name.replace(/\.agent\.md$/, "");
+                const agentId = data.id || folder;
+                if (seenIds.has(agentId)) continue;
+                seenIds.add(agentId);
+                result.push({
+                    id: agentId,
+                    name: data.name || folder,
+                    version: data.version || "1.0.0",
+                    description: data.description || "",
+                    skills: Array.isArray(data.skills) ? data.skills : [],
+                    icon: data.icon || "\uD83E\uDD16",
+                    flow: data.flow || "",
+                    hint: data.hint || "Peg\u00E1 el contenido del documento aqu\u00ED.",
+                    prompt: body.trim(),
+                    sourceDir: agentsDir,
+                    isDefault: agentsDir === defaultDir,
+                    isFlat: true,
+                    agentFile: agentFile,
                 });
             }
         } catch (_) { }
     }
     res.json({ agents: result });
 });
+
+// Importar agente externo a la carpeta agents/ local (copia los archivos)
+app.post("/api/agents/import", (req, res) => {
+    const { agentId, agentFile } = req.body;
+    if (!agentId || !agentFile) return res.status(400).json({ error: "agentId y agentFile requeridos" });
+    // Validar que el archivo origem existe y está en una ruta registrada
+    const normalizedFile = path.normalize(agentFile);
+    const allowedDirs = getAllAgentDirs().map(d => path.normalize(d));
+    const isAllowed = allowedDirs.some(d => normalizedFile.startsWith(d));
+    if (!isAllowed || !fs.existsSync(normalizedFile)) {
+        return res.status(400).json({ error: "Archivo no permitido o no encontrado" });
+    }
+    const localAgentsDir = path.join(__dirname, "agents");
+    const targetDir = path.join(localAgentsDir, agentId);
+    try {
+        if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
+        // Copiar .agent.md
+        fs.copyFileSync(normalizedFile, path.join(targetDir, `${agentId}.agent.md`));
+        // Copiar .prompt.md si existe junto al .agent.md
+        const srcDir = path.dirname(normalizedFile);
+        const siblingPrompt = path.join(srcDir, `${agentId}.prompt.md`);
+        if (fs.existsSync(siblingPrompt)) {
+            fs.copyFileSync(siblingPrompt, path.join(targetDir, `${agentId}.prompt.md`));
+        }
+        // Crear carpeta skills/ vacía
+        const skillsDir = path.join(targetDir, "skills");
+        if (!fs.existsSync(skillsDir)) fs.mkdirSync(skillsDir);
+        res.json({ ok: true, agentId, targetDir });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
 
 app.post("/api/chat", async (req, res) => {
     const { agentId, messages, model: requestedModel } = req.body;

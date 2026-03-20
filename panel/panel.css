@@ -1606,7 +1606,37 @@ margin-bottom: 20px;
     opacity: 0.7;
 }
 
-/* ─── Toggle switch ──────────────────────────────────────────────────────── */
+.mar-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.btn-agent-import {
+    background: rgba(227, 179, 65, 0.1);
+    border: 1px solid rgba(227, 179, 65, 0.4);
+    border-radius: 6px;
+    color: var(--warn);
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 5px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.btn-agent-import:hover:not(:disabled) {
+    background: rgba(227, 179, 65, 0.2);
+    box-shadow: 0 0 8px rgba(227, 179, 65, 0.25);
+}
+
+.btn-agent-import:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+
 
 .toggle-switch {
     position: relative;
