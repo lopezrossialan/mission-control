@@ -3,6 +3,9 @@ name: Doc Interpreter Agent
 id: doc-interpreter
 version: 1.0.0
 description: Lee e interpreta documentación funcional (.doc, .pdf) y extrae requerimientos estructurados para que otros agentes los consuman.
+icon: 📄
+flow: PRIMER PASO — Usarme antes que los otros agentes
+hint: Pegá el contenido de tu documento funcional y enviá.
 skills:
   - read-doc
   - read-pdf

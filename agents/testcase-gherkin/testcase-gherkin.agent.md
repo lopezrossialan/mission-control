@@ -3,6 +3,9 @@ name: Test Case Gherkin Agent
 id: testcase-gherkin
 version: 1.0.0
 description: Genera casos de prueba en formato Gherkin/BDD (Feature/Scenario/Given-When-Then) listos para usar con Cucumber, SpecFlow o Behave.
+icon: 🥒
+flow: SEGUNDO PASO — Usar después del Doc Interpreter
+hint: Pegá el documento funcional o el output del Doc Interpreter.
 skills:
   - read-doc
   - read-pdf

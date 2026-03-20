@@ -98,7 +98,63 @@ const ALLOWED_MODELS = new Set([
     "Mistral-Large-2411", "Phi-4", "DeepSeek-R1"
 ]);
 
-// Chat endpoint — streaming
+// ─── YAML frontmatter parser (sin dependencias externas) ──────────────────
+function parseFrontmatter(content) {
+    const match = content.match(/^---[\r\n]+([\s\S]*?)[\r\n]+---[\r\n]+([\s\S]*)/);
+    if (!match) return { data: {}, body: content };
+    const data = {};
+    const lines = match[1].split("\n").map(l => l.replace(/\r$/, ""));
+    let currentKey = null;
+    for (const line of lines) {
+        const arrayItem = line.match(/^\s+-\s+(.+)$/);
+        const keyValue = line.match(/^([\w-]+):\s*(.*)$/);
+        if (arrayItem && currentKey && Array.isArray(data[currentKey])) {
+            data[currentKey].push(arrayItem[1].trim());
+        } else if (keyValue) {
+            currentKey = keyValue[1];
+            const val = keyValue[2].trim();
+            data[currentKey] = val === "" ? [] : val;
+        }
+    }
+    return { data, body: match[2] };
+}
+
+// Listar agentes disponibles leyendo agents/ desde disco
+app.get("/api/agents", (req, res) => {
+    const agentsDir = path.join(__dirname, "agents");
+    const result = [];
+    try {
+        const folders = fs.readdirSync(agentsDir, { withFileTypes: true })
+            .filter(d => d.isDirectory())
+            .map(d => d.name);
+        for (const folder of folders) {
+            const agentFile = path.join(agentsDir, folder, `${folder}.agent.md`);
+            const promptFile = path.join(agentsDir, folder, `${folder}.prompt.md`);
+            if (!fs.existsSync(agentFile)) continue;
+            const { data } = parseFrontmatter(fs.readFileSync(agentFile, "utf8"));
+            let promptBody = "";
+            if (fs.existsSync(promptFile)) {
+                const { body } = parseFrontmatter(fs.readFileSync(promptFile, "utf8"));
+                promptBody = body.trim();
+            }
+            result.push({
+                id: data.id || folder,
+                name: data.name || folder,
+                version: data.version || "1.0.0",
+                description: data.description || "",
+                skills: Array.isArray(data.skills) ? data.skills : [],
+                icon: data.icon || "\uD83E\uDD16",
+                flow: data.flow || "",
+                hint: data.hint || "Peg\u00E1 el contenido del documento aqu\u00ED.",
+                prompt: promptBody,
+            });
+        }
+        res.json({ agents: result });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post("/api/chat", async (req, res) => {
     const { agentId, messages, model: requestedModel } = req.body;
 
@@ -106,7 +162,15 @@ app.post("/api/chat", async (req, res) => {
         return res.status(400).json({ error: "agentId y messages son requeridos" });
     }
 
-    const systemPrompt = AGENT_SYSTEM_PROMPTS[agentId];
+    const systemPrompt = AGENT_SYSTEM_PROMPTS[agentId] || (() => {
+        const promptFile = path.join(__dirname, "agents", agentId, `${agentId}.prompt.md`);
+        if (fs.existsSync(promptFile)) {
+            const { body } = parseFrontmatter(fs.readFileSync(promptFile, "utf8"));
+            return body.trim();
+        }
+        return null;
+    })();
+
     if (!systemPrompt) {
         return res.status(400).json({ error: `Agente desconocido: ${agentId}` });
     }

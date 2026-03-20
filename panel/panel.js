@@ -18,103 +18,96 @@ let usageLog = [];
 let realQuotaData = null;
 let quotaFetching = false;
 
-const AGENTS = [
-    {
-        id: "doc-interpreter",
-        name: "Doc Interpreter",
-        icon: "📄",
-        description: "Lee e interpreta documentación funcional (.doc, .pdf) y extrae requerimientos estructurados.",
-        skills: ["read-doc", "read-pdf", "extract-functional-requirements"],
-        flow: "PRIMER PASO — Usarme antes que los otros agentes",
-        hint: "Pegá el contenido de tu documento funcional y enviá.",
-        prompt: `Eres un analista funcional senior. Se te entregará el contenido de un documento funcional.
+let AGENTS = [];
+let _allAgents = [];
 
-Analizá el documento y generá el siguiente output en Markdown:
+// ─── Carga dinámica de agentes ─────────────────────────────────────────────
 
-## Módulos identificados
-## Actores y Roles
-## Flujos por módulo (principal, alternativo, errores)
-## Reglas de negocio
-## Precondiciones globales
-## Ambigüedades detectadas (marcar con ⚠️)
-## Resumen ejecutivo
+async function loadAgents() {
+    try {
+        const res = await fetch(`${API_BASE}/agents`);
+        const data = await res.json();
+        _allAgents = data.agents || [];
 
-Variable de entrada:
-{documento}: [PEGÁ AQUÍ EL CONTENIDO DEL DOCUMENTO]
+        const stored = localStorage.getItem("mc-active-agents");
+        let activeIds;
+        if (stored) {
+            activeIds = new Set(JSON.parse(stored));
+        } else {
+            activeIds = new Set(_allAgents.map(a => a.id));
+            localStorage.setItem("mc-active-agents", JSON.stringify([...activeIds]));
+        }
 
-Restricciones: no inventar funcionalidades, marcar ambigüedades con ⚠️, ser fiel al documento.`
-    },
-    {
-        id: "testcase-general",
-        name: "Test Case General",
-        icon: "🧪",
-        description: "Genera casos de prueba estándar (funcionales, regresión, integración, borde) en formato tabla Markdown.",
-        skills: ["read-doc", "read-pdf", "generate-testcases"],
-        flow: "SEGUNDO PASO — Usar después del Doc Interpreter",
-        hint: "Pegá el documento funcional o el output del Doc Interpreter.",
-        prompt: `Eres un QA Engineer senior. Se te proporcionará documentación funcional o requerimientos interpretados.
-
-Generá casos de prueba completos en el siguiente formato de tabla:
-
-| ID | Título | Precondiciones | Pasos | Resultado Esperado | Tipo |
-|----|--------|----------------|-------|--------------------|------|
-
-Tipos: Funcional / Regresión / Integración / Borde / Negativo
-Agrupá los casos por módulo. Al final incluí un resumen con totales por tipo.
-
-Variable de entrada:
-{documento}: [PEGÁ AQUÍ EL DOCUMENTO O EL OUTPUT DEL DOC INTERPRETER]
-
-Restricciones: IDs correlativos TC-001..., marcar ambigüedades con [REQUIERE CLARIFICACIÓN].`
-    },
-    {
-        id: "testcase-gherkin",
-        name: "Test Case Gherkin",
-        icon: "🥒",
-        description: "Genera casos de prueba en formato Gherkin/BDD listos para Cucumber, SpecFlow o Behave.",
-        skills: ["read-doc", "read-pdf", "generate-gherkin"],
-        flow: "SEGUNDO PASO — Usar después del Doc Interpreter",
-        hint: "Pegá el documento funcional o el output del Doc Interpreter.",
-        prompt: `Eres un especialista en BDD y Gherkin. Se te proporcionará documentación funcional.
-
-Generá archivos .feature con sintaxis Gherkin válida:
-- Cada funcionalidad = una Feature con narrativa (Como / Quiero / Para)
-- Scenarios para: flujo feliz, alternativos, validaciones y errores
-- Usar Scenario Outline + Examples para múltiples datos
-- Tags: @smoke, @regression, @functional, @negative, @pendiente
-
-Variable de entrada:
-{documento}: [PEGÁ AQUÍ EL DOCUMENTO O EL OUTPUT DEL DOC INTERPRETER]
-{idioma}: español
-
-Restricciones: sintaxis Gherkin estrictamente válida, no mezclar idiomas.`
-    },
-    {
-        id: "playwright-agent",
-        name: "Playwright Agent",
-        icon: "🎭",
-        description: "Genera tests end-to-end en Playwright (TypeScript) listos para ejecutar con npx playwright test.",
-        skills: ["read-doc", "read-pdf", "generate-playwright-tests"],
-        flow: "SEGUNDO PASO — Usar después del Doc Interpreter",
-        hint: "Pegá el documento o el output del Doc Interpreter. Podés indicar la URL base del sistema.",
-        prompt: `Eres un automation engineer senior especializado en Playwright con TypeScript. Se te proporcionará documentación funcional.
-
-Generá tests Playwright completos y listos para ejecutar:
-- Usar getByRole, getByLabel, getByText como locators principales
-- Patrón Arrange / Act / Assert en cada test
-- Agrupar con test.describe() por módulo
-- Cubrir: flujo feliz, casos alternativos y errores
-- Marcar con // TODO: ajustar selector donde dependa de la implementación
-
-Variable de entrada:
-{documento}: [PEGÁ AQUÍ EL DOCUMENTO O EL OUTPUT DEL DOC INTERPRETER]
-{url}: (opcional) URL base del sistema
-
-Restricciones: solo TypeScript, locators semánticos, no inventar URLs específicas.`
+        AGENTS = _allAgents.filter(a => activeIds.has(a.id));
+    } catch (err) {
+        console.error("No se pudo cargar agentes desde el servidor:", err);
     }
-];
+    renderAgents();
+    updateHeaderCounts();
+}
 
-// ─── Utilidades ───────────────────────────────────────────────────────────
+function updateHeaderCounts() {
+    const countEl = document.getElementById("agents-count");
+    const skillsEl = document.getElementById("skills-count");
+    if (countEl) countEl.textContent = AGENTS.length;
+    if (skillsEl) {
+        const allSkills = new Set(AGENTS.flatMap(a => a.skills || []));
+        skillsEl.textContent = allSkills.size;
+    }
+}
+
+// ─── Gestionar Agentes ───────────────────────────────────────────────
+
+function openManageModal() {
+    const stored = localStorage.getItem("mc-active-agents");
+    const activeIds = stored ? new Set(JSON.parse(stored)) : new Set(_allAgents.map(a => a.id));
+
+    const list = document.getElementById("manage-agents-list");
+    if (_allAgents.length === 0) {
+        list.innerHTML = `<p class="manage-empty">❌ No se detectaron agentes. ¿Está corriendo el servidor?</p>`;
+    } else {
+        list.innerHTML = _allAgents.map(agent => `
+            <div class="manage-agent-row">
+                <div class="mar-info">
+                    <span class="mar-icon">${agent.icon}</span>
+                    <div class="mar-meta">
+                        <div class="mar-name">${agent.name}</div>
+                        <div class="mar-desc">${agent.description}</div>
+                        <div class="mar-id">${agent.id}.agent.md · v${agent.version}</div>
+                    </div>
+                </div>
+                <label class="toggle-switch" title="${activeIds.has(agent.id) ? 'Desactivar' : 'Activar'} agente">
+                    <input type="checkbox" ${activeIds.has(agent.id) ? "checked" : ""}
+                           onchange="toggleAgentActive('${agent.id}', this.checked)">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>`).join("");
+    }
+    document.getElementById("manage-modal").style.display = "flex";
+}
+
+function handleManageOverlayClick(e) {
+    if (e.target === document.getElementById("manage-modal")) closeManageModal();
+}
+
+function closeManageModal() {
+    document.getElementById("manage-modal").style.display = "none";
+}
+
+function toggleAgentActive(id, active) {
+    const stored = localStorage.getItem("mc-active-agents");
+    const activeIds = stored ? new Set(JSON.parse(stored)) : new Set(_allAgents.map(a => a.id));
+    if (active) activeIds.add(id); else activeIds.delete(id);
+    localStorage.setItem("mc-active-agents", JSON.stringify([...activeIds]));
+    AGENTS = _allAgents.filter(a => activeIds.has(a.id));
+    renderAgents();
+    updateHeaderCounts();
+}
+
+
+
+
+// ─── Utilidades ─────────────────────────────────────────────────────────────────────
 
 function escapeHtml(text) {
     return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -771,7 +764,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 document.addEventListener("DOMContentLoaded", () => {
-    renderAgents();
+    loadAgents();
     loadOutputsCount();
     checkServerStatus();
     // Inicializar selector global de modelo y barras de límites

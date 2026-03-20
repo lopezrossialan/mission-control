@@ -3,6 +3,9 @@ name: Playwright Agent
 id: playwright-agent
 version: 1.0.0
 description: Genera tests automatizados en Playwright (TypeScript) a partir de documentación funcional o requerimientos interpretados. Produce código listo para ejecutar.
+icon: 🎭
+flow: SEGUNDO PASO — Usar después del Doc Interpreter
+hint: Pegá el documento o el output del Doc Interpreter. Podés indicar la URL base del sistema.
 skills:
   - read-doc
   - read-pdf

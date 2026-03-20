@@ -3,6 +3,9 @@ name: Test Case General Agent
 id: testcase-general
 version: 1.0.0
 description: Genera casos de prueba completos y detallados (funcionales, de integración, regresión, borde) a partir de documentación funcional o requerimientos interpretados.
+icon: 🧪
+flow: SEGUNDO PASO — Usar después del Doc Interpreter
+hint: Pegá el documento funcional o el output del Doc Interpreter.
 skills:
   - read-doc
   - read-pdf

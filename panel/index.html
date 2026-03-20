@@ -21,11 +21,11 @@
                 </div>
                 <div class="header-stats">
                     <div class="stat">
-                        <div class="stat-value">4</div>
+                        <div class="stat-value" id="agents-count">—</div>
                         <div class="stat-label">Agentes</div>
                     </div>
                     <div class="stat">
-                        <div class="stat-value">6</div>
+                        <div class="stat-value" id="skills-count">—</div>
                         <div class="stat-label">Skills</div>
                     </div>
                     <div class="stat">
@@ -33,9 +33,14 @@
                         <div class="stat-label">Outputs</div>
                     </div>
                 </div>
-                <button class="btn-llm-panel" onclick="toggleLLMPanel()" title="LLMs &amp; Consumo">
-                    🤖 LLMs &amp; Consumo
-                </button>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <button class="btn-manage-agents" onclick="openManageModal()" title="Gestionar Agentes">
+                        ⚙️ Gestionar Agentes
+                    </button>
+                    <button class="btn-llm-panel" onclick="toggleLLMPanel()" title="LLMs &amp; Consumo">
+                        🤖 LLMs &amp; Consumo
+                    </button>
+                </div>
             </div>
         </div>
     </header>
@@ -157,6 +162,24 @@
 
         <div class="agents-grid" id="agents-grid"></div>
     </main>
+
+    <!-- Modal: Gestionar Agentes -->
+    <div class="modal-overlay" id="manage-modal" onclick="handleManageOverlayClick(event)">
+        <div class="modal manage-modal-box">
+            <div class="modal-header">
+                <h3>⚙️ Gestionar Agentes</h3>
+                <button class="modal-close" onclick="closeManageModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <p class="manage-hint">
+                    Los agentes se detectan automáticamente desde la carpeta <code>agents/</code>.
+                    Activá o desactivá cuáles se muestran en el panel. Para agregar uno nuevo,
+                    creá su carpeta en VS Code y reiniciá el servidor.
+                </p>
+                <div id="manage-agents-list"></div>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal: Ver Prompt -->
     <div class="modal-overlay" id="modal">
