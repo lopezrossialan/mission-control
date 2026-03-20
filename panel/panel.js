@@ -30,12 +30,16 @@ async function loadAgents() {
         const data = await res.json();
         _allAgents = data.agents || [];
 
+        const validIds = new Set(_allAgents.map(a => a.id));
         const stored = localStorage.getItem("mc-active-agents");
         let activeIds;
         if (stored) {
-            activeIds = new Set(JSON.parse(stored));
+            // Limpiar IDs que ya no existen en disco
+            const cleaned = JSON.parse(stored).filter(id => validIds.has(id));
+            activeIds = new Set(cleaned);
+            localStorage.setItem("mc-active-agents", JSON.stringify([...activeIds]));
         } else {
-            activeIds = new Set(_allAgents.map(a => a.id));
+            activeIds = new Set(validIds);
             localStorage.setItem("mc-active-agents", JSON.stringify([...activeIds]));
         }
 
