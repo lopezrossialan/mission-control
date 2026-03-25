@@ -140,8 +140,21 @@ function renderWorkflow() {
 
 // ─── Gestionar Agentes ───────────────────────────────────────────────
 
-async function openManageModal() {
-    document.getElementById("manage-modal").style.display = "flex";
+function switchSidebarTab(tab, btn) {
+    document.querySelectorAll(".sidebar-tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".sidebar-panel").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById(`sidebar-panel-${tab}`).classList.add("active");
+    if (tab === "llm") {
+        renderLLMPanel();
+        if (!realQuotaData) fetchRealQuota();
+    }
+    if (tab === "manage") {
+        openManagePanel();
+    }
+}
+
+async function openManagePanel() {
     try {
         const res = await fetch(`${API_BASE}/agent-dirs`);
         const data = await res.json();
@@ -149,6 +162,10 @@ async function openManageModal() {
     } catch (_) { _extraDirs = []; }
     renderManageModal();
 }
+
+// kept for backward compatibility (por si hay llamadas a openManageModal en otros lugares)
+async function openManageModal() { openManagePanel(); }
+function closeManageModal() { }
 
 function renderManageModal() {
     const stored = localStorage.getItem("mc-active-agents");
@@ -301,13 +318,7 @@ async function removeAgentDirByIndex(index) {
     } catch (_) { }
 }
 
-function handleManageOverlayClick(e) {
-    if (e.target === document.getElementById("manage-modal")) closeManageModal();
-}
-
-function closeManageModal() {
-    document.getElementById("manage-modal").style.display = "none";
-}
+function handleManageOverlayClick(e) { }
 
 function toggleAgentActive(id, active) {
     const stored = localStorage.getItem("mc-active-agents");
@@ -614,14 +625,9 @@ function buildModelOptions(selectedId) {
 }
 
 function toggleLLMPanel() {
-    const panel = document.getElementById("llm-panel");
-    const overlay = document.getElementById("llm-panel-overlay");
-    panel.classList.toggle("open");
-    overlay.classList.toggle("open");
-    if (panel.classList.contains("open")) {
-        renderLLMPanel();
-        if (!realQuotaData) fetchRealQuota();
-    }
+    // Abre el tab LLM en el sidebar
+    const tabBtn = document.querySelector('.sidebar-tab[data-tab="llm"]');
+    if (tabBtn) switchSidebarTab("llm", tabBtn);
 }
 
 async function fetchRealQuota() {
@@ -752,7 +758,7 @@ function addUsageRecord(agentId, model, usage) {
         total: usage.total_tokens || 0,
         time: now.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
     });
-    if (document.getElementById("llm-panel").classList.contains("open")) renderLLMPanel();
+    if (document.getElementById("sidebar-panel-llm").classList.contains("active")) renderLLMPanel();
 }
 
 function appendTokenBadge(bubble, usage, model) {
