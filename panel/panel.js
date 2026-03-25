@@ -3,17 +3,42 @@ const API_BASE = "http://localhost:3000/api";
 // Límites basados en documentación pública de GitHub Models (plan Free/Pro)
 // https://docs.github.com/en/github-models/prototyping-with-ai-models#rate-limits
 const MODELS = [
-    { id: "gpt-4o", label: "GPT-4o", provider: "OpenAI", cost: 3, rpm: 10, tpd: 8_000, tpm: 4_000 },
-    { id: "gpt-4o-mini", label: "GPT-4o mini", provider: "OpenAI", cost: 1, rpm: 15, tpd: 16_000, tpm: 8_000 },
-    { id: "o3-mini", label: "o3-mini", provider: "OpenAI", cost: 3, rpm: 10, tpd: 8_000, tpm: 4_000 },
-    { id: "Meta-Llama-3.3-70B-Instruct", label: "Llama 3.3 70B", provider: "Meta", cost: 2, rpm: 15, tpd: 16_000, tpm: 8_000 },
-    { id: "Meta-Llama-3.1-8B-Instruct", label: "Llama 3.1 8B", provider: "Meta", cost: 1, rpm: 30, tpd: 32_000, tpm: 16_000 },
-    { id: "Mistral-Large-2411", label: "Mistral Large", provider: "Mistral", cost: 3, rpm: 10, tpd: 8_000, tpm: 4_000 },
-    { id: "Phi-4", label: "Phi-4", provider: "Microsoft", cost: 1, rpm: 15, tpd: 16_000, tpm: 8_000 },
-    { id: "DeepSeek-R1", label: "DeepSeek R1", provider: "DeepSeek", cost: 3, rpm: 10, tpd: 8_000, tpm: 4_000 },
+    // OpenAI
+    { id: "openai/gpt-4.1", label: "GPT-4.1", provider: "OpenAI", cost: 2, rpm: 10, tpd: 40_000 },
+    { id: "openai/gpt-4.1-mini", label: "GPT-4.1 mini", provider: "OpenAI", cost: 1, rpm: 15, tpd: 120_000 },
+    { id: "openai/gpt-4.1-nano", label: "GPT-4.1 nano", provider: "OpenAI", cost: 1, rpm: 15, tpd: 120_000 },
+    { id: "openai/gpt-4o", label: "GPT-4o", provider: "OpenAI", cost: 2, rpm: 10, tpd: 40_000 },
+    { id: "openai/gpt-4o-mini", label: "GPT-4o mini", provider: "OpenAI", cost: 1, rpm: 15, tpd: 120_000 },
+    { id: "openai/o3-mini", label: "o3-mini", provider: "OpenAI", cost: 3, rpm: 2, tpd: 12_000 },
+    { id: "openai/o4-mini", label: "o4-mini", provider: "OpenAI", cost: 3, rpm: 2, tpd: 12_000 },
+    // Meta
+    { id: "meta/llama-4-maverick-17b-128e-instruct-fp8", label: "Llama 4 Maverick", provider: "Meta", cost: 2, rpm: 10, tpd: 40_000 },
+    { id: "meta/llama-4-scout-17b-16e-instruct", label: "Llama 4 Scout", provider: "Meta", cost: 1, rpm: 15, tpd: 120_000 },
+    { id: "meta/llama-3.3-70b-instruct", label: "Llama 3.3 70B", provider: "Meta", cost: 2, rpm: 10, tpd: 40_000 },
+    { id: "meta/meta-llama-3.1-405b-instruct", label: "Llama 3.1 405B", provider: "Meta", cost: 2, rpm: 10, tpd: 40_000 },
+    { id: "meta/meta-llama-3.1-8b-instruct", label: "Llama 3.1 8B", provider: "Meta", cost: 1, rpm: 15, tpd: 120_000 },
+    // DeepSeek
+    { id: "deepseek/deepseek-r1", label: "DeepSeek R1", provider: "DeepSeek", cost: 3, rpm: 1, tpd: 8_000 },
+    { id: "deepseek/deepseek-r1-0528", label: "DeepSeek R1 (0528)", provider: "DeepSeek", cost: 3, rpm: 1, tpd: 8_000 },
+    { id: "deepseek/deepseek-v3-0324", label: "DeepSeek V3", provider: "DeepSeek", cost: 2, rpm: 10, tpd: 40_000 },
+    // Mistral
+    { id: "mistral-ai/mistral-small-2503", label: "Mistral Small 3.1", provider: "Mistral", cost: 1, rpm: 15, tpd: 120_000 },
+    { id: "mistral-ai/mistral-medium-2505", label: "Mistral Medium 3", provider: "Mistral", cost: 1, rpm: 15, tpd: 120_000 },
+    { id: "mistral-ai/codestral-2501", label: "Codestral 25.01", provider: "Mistral", cost: 1, rpm: 15, tpd: 120_000 },
+    // xAI
+    { id: "xai/grok-3", label: "Grok 3", provider: "xAI", cost: 3, rpm: 1, tpd: 15_000 },
+    { id: "xai/grok-3-mini", label: "Grok 3 Mini", provider: "xAI", cost: 2, rpm: 2, tpd: 30_000 },
+    // Microsoft
+    { id: "microsoft/phi-4", label: "Phi-4", provider: "Microsoft", cost: 1, rpm: 15, tpd: 120_000 },
+    { id: "microsoft/phi-4-mini-instruct", label: "Phi-4 mini", provider: "Microsoft", cost: 1, rpm: 15, tpd: 120_000 },
+    { id: "microsoft/phi-4-reasoning", label: "Phi-4 Reasoning", provider: "Microsoft", cost: 1, rpm: 15, tpd: 120_000 },
+    { id: "microsoft/mai-ds-r1", label: "MAI-DS-R1", provider: "Microsoft", cost: 3, rpm: 1, tpd: 8_000 },
+    // Cohere
+    { id: "cohere/cohere-command-a", label: "Command A", provider: "Cohere", cost: 1, rpm: 15, tpd: 120_000 },
+    { id: "cohere/cohere-command-r-plus-08-2024", label: "Command R+", provider: "Cohere", cost: 2, rpm: 10, tpd: 40_000 },
 ];
 
-let activeChatModel = "gpt-4o";
+let activeChatModel = "openai/gpt-4o";
 let usageLog = [];
 let realQuotaData = null;
 let quotaFetching = false;

@@ -31,7 +31,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "panel")));
 
 const client = new OpenAI({
-    baseURL: "https://models.inference.ai.azure.com",
+    baseURL: "https://models.github.ai/inference",
     apiKey: process.env.GITHUB_TOKEN,
 });
 
@@ -93,9 +93,26 @@ Restricciones: no inventar URLs ni selectores específicos, usar placeholders de
 };
 
 const ALLOWED_MODELS = new Set([
-    "gpt-4o", "gpt-4o-mini", "o3-mini",
-    "Meta-Llama-3.3-70B-Instruct", "Meta-Llama-3.1-8B-Instruct",
-    "Mistral-Large-2411", "Phi-4", "DeepSeek-R1"
+    // OpenAI
+    "openai/gpt-4.1", "openai/gpt-4.1-mini", "openai/gpt-4.1-nano",
+    "openai/gpt-4o", "openai/gpt-4o-mini",
+    "openai/o3-mini", "openai/o4-mini",
+    // Meta
+    "meta/llama-4-maverick-17b-128e-instruct-fp8", "meta/llama-4-scout-17b-16e-instruct",
+    "meta/llama-3.3-70b-instruct", "meta/meta-llama-3.1-405b-instruct", "meta/meta-llama-3.1-8b-instruct",
+    // DeepSeek
+    "deepseek/deepseek-r1", "deepseek/deepseek-r1-0528", "deepseek/deepseek-v3-0324",
+    // Mistral
+    "mistral-ai/mistral-small-2503", "mistral-ai/mistral-medium-2505", "mistral-ai/codestral-2501",
+    // xAI
+    "xai/grok-3", "xai/grok-3-mini",
+    // Microsoft
+    "microsoft/phi-4", "microsoft/phi-4-mini-instruct", "microsoft/phi-4-reasoning", "microsoft/mai-ds-r1",
+    // Cohere
+    "cohere/cohere-command-a", "cohere/cohere-command-r-plus-08-2024",
+    // IDs legacy (backward compat)
+    "gpt-4o", "gpt-4o-mini", "DeepSeek-R1", "Phi-4", "Mistral-Large-2411",
+    "Meta-Llama-3.3-70B-Instruct", "Meta-Llama-3.1-8B-Instruct", "o3-mini"
 ]);
 
 // ─── YAML frontmatter parser (sin dependencias externas) ──────────────────
@@ -341,15 +358,15 @@ app.post("/api/chat", async (req, res) => {
     const model = ALLOWED_MODELS.has(requestedModel) ? requestedModel : "gpt-4o";
 
     // Límites de tokens por modelo (aprox. 4 chars = 1 token)
-    const MODEL_TOKEN_LIMITS = {
-        "DeepSeek-R1": 3000,       // max 4000, reservamos margen para system prompt + respuesta
-        "Phi-4": 6000,
-        "Mistral-Large-2411": 8000,
-        "gpt-4o": 12000,
-        "gpt-4o-mini": 8000,
-        "Meta-Llama-3.1-70B-Instruct": 8000,
-    };
-    const MAX_HISTORY_CHARS = (MODEL_TOKEN_LIMITS[model] || 6000) * 4;
+    // Custom/restricted tier: max 4000 in → usamos 3000 con margen
+    const RESTRICTED_MODELS = new Set([
+        "deepseek/deepseek-r1", "deepseek/deepseek-r1-0528", "microsoft/mai-ds-r1",
+        "xai/grok-3", "xai/grok-3-mini",
+        "openai/o3-mini", "openai/o4-mini",
+        "DeepSeek-R1", "o3-mini" // legacy IDs
+    ]);
+    const tokenLimit = RESTRICTED_MODELS.has(model) ? 3000 : 7000;
+    const MAX_HISTORY_CHARS = tokenLimit * 4;
 
     // Recortar historial desde el inicio hasta entrar en el límite
     let trimmedMessages = [...messages];
