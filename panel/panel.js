@@ -189,13 +189,20 @@ function renderManageModal() {
             <button class="dir-remove-btn" onclick="removeAgentDirByIndex(${i})" title="Quitar ruta">✕</button>
         </div>`).join("")}
         <div class="manage-dir-add">
+            <label class="btn-dir-browse" title="Seleccionar carpeta del agente">
+                📂 Seleccionar carpeta
+                <input type="file" id="folder-picker" webkitdirectory multiple style="display:none"
+                       onchange="handleFolderPick(this)">
+            </label>
+            <span class="dir-browse-hint">o ingresá la ruta manualmente:</span>
             <input type="text" id="new-dir-input"
                    placeholder="C:\\ruta\\a\\tus\\agentes"
                    autocomplete="off"
                    onkeydown="if(event.key==='Enter') addAgentDir()" />
-            <button class="btn-dir-add" onclick="addAgentDir()">➕ Agregar ruta</button>
+            <button class="btn-dir-add" onclick="addAgentDir()">➕ Agregar</button>
         </div>
-        <div id="dir-add-error" class="dir-add-error" style="display:none"></div>`;
+        <div id="dir-add-error" class="dir-add-error" style="display:none"></div>
+        <div id="folder-pick-preview" style="display:none"></div>`;
 
     const agentsHtml = _allAgents.length === 0
         ? `<p class="manage-empty">❌ No se detectaron agentes. ¿Está corriendo el servidor?</p>`
@@ -277,6 +284,119 @@ async function refreshManageAgents() {
         _extraDirs = data.dirs || [];
     } catch (_) { }
     renderManageModal();
+}
+
+async function handleFolderPick(input) {
+    const files = Array.from(input.files);
+    if (!files.length) return;
+
+    // Extraer la ruta de la carpeta desde el primer archivo
+    // webkitRelativePath = "nombreCarpeta/archivo.md" o "nombreCarpeta/skills/x.md"
+    const firstRelative = files[0].webkitRelativePath;
+    const folderName = firstRelative.split("/")[0];
+
+    // Detectar archivos relevantes
+    const agentFile = files.find(f => f.name.endsWith(".agent.md"));
+    const promptFile = files.find(f => f.name.endsWith(".prompt.md"));
+    const skillFiles = files.filter(f => f.name.endsWith(".skill.md"));
+
+    // Mostrar preview de lo que se encontró
+    const preview = document.getElementById("folder-pick-preview");
+    if (preview) {
+        const found = [
+            agentFile ? `✅ ${agentFile.name}` : "❌ No se encontró .agent.md",
+            promptFile ? `✅ ${promptFile.name}` : "⚠️ No se encontró .prompt.md",
+            skillFiles.length > 0
+                ? `✅ ${skillFiles.length} skill(s): ${skillFiles.map(f => f.name).join(", ")}`
+                : "ℹ️ Sin skills",
+        ];
+        preview.style.display = "block";
+        preview.innerHTML = `
+            <div class="folder-pick-preview-box">
+                <div class="fpp-title">📁 ${escapeHtml(folderName)}</div>
+                ${found.map(line => `<div class="fpp-line">${escapeHtml(line)}</div>`).join("")}
+                <div class="fpp-actions">
+                    <button class="btn-dir-add" onclick="confirmFolderImport()" id="btn-confirm-folder">
+                        ✅ Importar esta carpeta
+                    </button>
+                    <button class="btn-folder-cancel" onclick="cancelFolderPick()">✕ Cancelar</button>
+                </div>
+            </div>`;
+
+        // Guardar los archivos en memoria para confirmar
+        window._pendingFolderFiles = files;
+        window._pendingFolderName = folderName;
+    }
+}
+
+async function confirmFolderImport() {
+    const files = window._pendingFolderFiles;
+    if (!files || !files.length) return;
+
+    const btn = document.getElementById("btn-confirm-folder");
+    if (btn) { btn.disabled = true; btn.textContent = "⏳ Importando..."; }
+
+    const agentFile = files.find(f => f.name.endsWith(".agent.md"));
+    const promptFile = files.find(f => f.name.endsWith(".prompt.md"));
+    const skillFiles = files.filter(f => f.name.endsWith(".skill.md"));
+
+    if (!agentFile) {
+        showToast("❌ No se encontró un archivo .agent.md en la carpeta seleccionada");
+        if (btn) { btn.disabled = false; btn.textContent = "✅ Importar esta carpeta"; }
+        return;
+    }
+
+    // Leer contenidos de los archivos
+    const readFile = f => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.onerror = reject;
+        reader.readAsText(f);
+    });
+
+    try {
+        const agentContent = await readFile(agentFile);
+        const promptContent = promptFile ? await readFile(promptFile) : null;
+        const skillsContent = await Promise.all(skillFiles.map(async f => ({
+            name: f.name,
+            content: await readFile(f),
+        })));
+
+        const res = await fetch(`${API_BASE}/agents/import-files`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                agentContent,
+                promptContent,
+                skillsContent,
+                folderName: window._pendingFolderName,
+            }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            showToast(`❌ ${data.error}`);
+            if (btn) { btn.disabled = false; btn.textContent = "✅ Importar esta carpeta"; }
+            return;
+        }
+
+        showToast(`✅ Agente "${window._pendingFolderName}" importado correctamente`);
+        window._pendingFolderFiles = null;
+        window._pendingFolderName = null;
+        await refreshManageAgents();
+    } catch (err) {
+        showToast("❌ Error al importar: " + err.message);
+        if (btn) { btn.disabled = false; btn.textContent = "✅ Importar esta carpeta"; }
+    }
+}
+
+function cancelFolderPick() {
+    window._pendingFolderFiles = null;
+    window._pendingFolderName = null;
+    const preview = document.getElementById("folder-pick-preview");
+    if (preview) preview.style.display = "none";
+    const picker = document.getElementById("folder-picker");
+    if (picker) picker.value = "";
 }
 
 async function addAgentDir() {

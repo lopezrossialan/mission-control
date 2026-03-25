@@ -333,6 +333,49 @@ app.post("/api/agents/import", (req, res) => {
     }
 });
 
+// Importar agente desde archivos enviados por el browser (Opción A: webkitdirectory)
+app.post("/api/agents/import-files", (req, res) => {
+    const { agentContent, promptContent, skillsContent, folderName } = req.body;
+    if (!agentContent || !folderName) {
+        return res.status(400).json({ error: "agentContent y folderName son requeridos" });
+    }
+
+    // Extraer el agentId desde el frontmatter del .agent.md
+    const idMatch = agentContent.match(/^---[\r\n]+[\s\S]*?^id:\s*(.+)$/m);
+    const agentId = idMatch ? idMatch[1].trim() : folderName.replace(/[^a-zA-Z0-9\-_]/g, "-");
+
+    const localAgentsDir = path.join(__dirname, "agents");
+    const targetDir = path.join(localAgentsDir, agentId);
+
+    try {
+        if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
+
+        // Guardar .agent.md
+        fs.writeFileSync(path.join(targetDir, `${agentId}.agent.md`), agentContent, "utf8");
+
+        // Guardar .prompt.md si viene
+        if (promptContent) {
+            fs.writeFileSync(path.join(targetDir, `${agentId}.prompt.md`), promptContent, "utf8");
+        }
+
+        // Guardar skills
+        if (skillsContent && skillsContent.length > 0) {
+            const skillsDir = path.join(targetDir, "skills");
+            if (!fs.existsSync(skillsDir)) fs.mkdirSync(skillsDir);
+            for (const skill of skillsContent) {
+                const safeName = path.basename(skill.name).replace(/[^a-zA-Z0-9\-_.]/g, "_");
+                fs.writeFileSync(path.join(skillsDir, safeName), skill.content, "utf8");
+            }
+        } else {
+            const skillsDir = path.join(targetDir, "skills");
+            if (!fs.existsSync(skillsDir)) fs.mkdirSync(skillsDir);
+        }
+
+        res.json({ ok: true, agentId, targetDir });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 
 app.post("/api/chat", async (req, res) => {

@@ -1868,6 +1868,93 @@ margin-bottom: 20px;
     cursor: not-allowed;
 }
 
+/* ─── FOLDER PICKER (Opción A) ──────────────────────────── */
+.manage-dir-add {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.btn-dir-browse {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--accent);
+    background: rgba(0, 212, 255, 0.08);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 7px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.btn-dir-browse:hover {
+    background: rgba(0, 212, 255, 0.18);
+    box-shadow: 0 0 8px rgba(0, 212, 255, 0.25);
+}
+
+.dir-browse-hint {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.folder-pick-preview-box {
+    margin-top: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    width: 100%;
+}
+
+.fpp-title {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.fpp-line {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    padding: 2px 0;
+}
+
+.fpp-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+    align-items: center;
+}
+
+.btn-folder-cancel {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-folder-cancel:hover {
+    border-color: var(--accent3);
+    color: var(--accent3);
+}
+
+
 
 
 .toggle-switch {
