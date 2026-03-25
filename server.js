@@ -340,6 +340,26 @@ app.post("/api/chat", async (req, res) => {
 
     const model = ALLOWED_MODELS.has(requestedModel) ? requestedModel : "gpt-4o";
 
+    // Límites de tokens por modelo (aprox. 4 chars = 1 token)
+    const MODEL_TOKEN_LIMITS = {
+        "DeepSeek-R1": 3000,       // max 4000, reservamos margen para system prompt + respuesta
+        "Phi-4": 6000,
+        "Mistral-Large-2411": 8000,
+        "gpt-4o": 12000,
+        "gpt-4o-mini": 8000,
+        "Meta-Llama-3.1-70B-Instruct": 8000,
+    };
+    const MAX_HISTORY_CHARS = (MODEL_TOKEN_LIMITS[model] || 6000) * 4;
+
+    // Recortar historial desde el inicio hasta entrar en el límite
+    let trimmedMessages = [...messages];
+    while (trimmedMessages.length > 1) {
+        const totalChars = trimmedMessages.reduce((sum, m) => sum + (m.content || "").length, 0)
+            + systemPrompt.length;
+        if (totalChars <= MAX_HISTORY_CHARS) break;
+        trimmedMessages.shift(); // elimina el mensaje más antiguo
+    }
+
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
@@ -347,7 +367,7 @@ app.post("/api/chat", async (req, res) => {
     try {
         const stream = await client.chat.completions.create({
             model,
-            messages: [{ role: "system", content: systemPrompt }, ...messages],
+            messages: [{ role: "system", content: systemPrompt }, ...trimmedMessages],
             stream: true,
             stream_options: { include_usage: true },
         });
