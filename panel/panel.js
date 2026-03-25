@@ -781,21 +781,34 @@ async function fetchRealQuota() {
 function renderRealQuota() {
     if (!realQuotaData) return;
     const d = realQuotaData;
-    const tokPct = Math.min(100, Math.round(((d.limit_tokens - d.remaining_tokens) / d.limit_tokens) * 100));
-    const reqPct = Math.min(100, Math.round(((d.limit_requests - d.remaining_requests) / d.limit_requests) * 100));
+
+    // null significa que la API no devolvió ese header
+    const hasTokens = d.limit_tokens !== null && d.limit_tokens > 0;
+    const hasRequests = d.limit_requests !== null && d.limit_requests > 0;
+
+    const tokPct = hasTokens ? Math.min(100, Math.round(((d.limit_tokens - d.remaining_tokens) / d.limit_tokens) * 100)) : 0;
+    const reqPct = hasRequests ? Math.min(100, Math.round(((d.limit_requests - d.remaining_requests) / d.limit_requests) * 100)) : 0;
     const tokWarn = tokPct >= 80 ? "bar-danger" : tokPct >= 50 ? "bar-warn" : "";
     const reqWarn = reqPct >= 80 ? "bar-danger" : reqPct >= 50 ? "bar-warn" : "";
     const checkedAt = new Date(d.checked_at).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+    const tokLabel = hasTokens
+        ? `${d.remaining_tokens.toLocaleString()} <span class="rq-of">/ ${d.limit_tokens.toLocaleString()}</span>`
+        : `<span class="rq-of">No disponible para este modelo</span>`;
+    const reqLabel = hasRequests
+        ? `${d.remaining_requests.toLocaleString()} <span class="rq-of">/ ${d.limit_requests.toLocaleString()}</span>`
+        : `<span class="rq-of">No disponible para este modelo</span>`;
+
     document.getElementById("real-quota-box").innerHTML = `
         <div class="real-quota-model">${escapeHtml(d.model)} <span class="rq-region">${escapeHtml(d.region)}</span></div>
         <div class="rq-row">
             <div class="rq-label">Tokens restantes</div>
-            <div class="rq-value">${d.remaining_tokens.toLocaleString()} <span class="rq-of">/ ${d.limit_tokens.toLocaleString()}</span></div>
+            <div class="rq-value">${tokLabel}</div>
         </div>
         <div class="mlr-bar-wrap"><div class="mlr-bar ${tokWarn}" style="width:${tokPct}%"></div></div>
         <div class="rq-row" style="margin-top:10px">
             <div class="rq-label">Requests restantes</div>
-            <div class="rq-value">${d.remaining_requests.toLocaleString()} <span class="rq-of">/ ${d.limit_requests.toLocaleString()}</span></div>
+            <div class="rq-value">${reqLabel}</div>
         </div>
         <div class="mlr-bar-wrap"><div class="mlr-bar ${reqWarn}" style="width:${reqPct}%"></div></div>
         <div class="rq-checked">⏱ Consultado a las ${checkedAt} · cuesta 1 request</div>

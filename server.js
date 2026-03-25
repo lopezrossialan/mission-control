@@ -28,7 +28,7 @@ const upload = multer({
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "panel")));
+app.use(express.static(path.join(__dirname, "panel"), { etag: false, lastModified: false, setHeaders: (res) => { res.setHeader("Cache-Control", "no-store"); } }));
 
 const client = new OpenAI({
     baseURL: "https://models.github.ai/inference",
@@ -496,12 +496,10 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
 
 // Cuota real de GitHub Models (vía headers de la API)
 app.get("/api/quota", async (req, res) => {
-    const model = req.query.model || "gpt-4o-mini";
-    const allowed = ["gpt-4o", "gpt-4o-mini", "o3-mini", "Meta-Llama-3.3-70B-Instruct",
-        "Meta-Llama-3.1-8B-Instruct", "Mistral-Large-2411", "Phi-4", "DeepSeek-R1"];
-    if (!allowed.includes(model)) return res.status(400).json({ error: "Modelo no permitido" });
+    const model = req.query.model || "openai/gpt-4o-mini";
+    if (!ALLOWED_MODELS.has(model)) return res.status(400).json({ error: "Modelo no permitido" });
     try {
-        const response = await fetch("https://models.inference.ai.azure.com/chat/completions", {
+        const response = await fetch("https://models.github.ai/inference/chat/completions", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -514,14 +512,22 @@ app.get("/api/quota", async (req, res) => {
             }),
         });
         const h = response.headers;
+        // Loguear todos los headers de rate limit para debug
+        const allHeaders = {};
+        h.forEach((v, k) => { if (k.startsWith("x-ratelimit") || k.startsWith("x-ms")) allHeaders[k] = v; });
+        const remaining_tokens = h.get("x-ratelimit-remaining-tokens");
+        const limit_tokens = h.get("x-ratelimit-limit-tokens");
+        const remaining_requests = h.get("x-ratelimit-remaining-requests");
+        const limit_requests = h.get("x-ratelimit-limit-requests");
         res.json({
             model,
             status: response.status,
-            remaining_tokens: parseInt(h.get("x-ratelimit-remaining-tokens") || "0"),
-            limit_tokens: parseInt(h.get("x-ratelimit-limit-tokens") || "0"),
-            remaining_requests: parseInt(h.get("x-ratelimit-remaining-requests") || "0"),
-            limit_requests: parseInt(h.get("x-ratelimit-limit-requests") || "0"),
+            remaining_tokens: remaining_tokens !== null ? parseInt(remaining_tokens) : null,
+            limit_tokens: limit_tokens !== null ? parseInt(limit_tokens) : null,
+            remaining_requests: remaining_requests !== null ? parseInt(remaining_requests) : null,
+            limit_requests: limit_requests !== null ? parseInt(limit_requests) : null,
             region: h.get("x-ms-region") || "",
+            headers_found: allHeaders,
             checked_at: new Date().toISOString(),
         });
     } catch (err) {
