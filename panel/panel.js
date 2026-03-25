@@ -77,13 +77,8 @@ async function loadAgents() {
 }
 
 function updateHeaderCounts() {
-    const countEl = document.getElementById("agents-count");
-    const skillsEl = document.getElementById("skills-count");
-    if (countEl) countEl.textContent = AGENTS.length;
-    if (skillsEl) {
-        const allSkills = new Set(AGENTS.flatMap(a => a.skills || []));
-        skillsEl.textContent = allSkills.size;
-    }
+    const badge = document.getElementById("nav-badge-agents");
+    if (badge) badge.textContent = AGENTS.length > 0 ? AGENTS.length : "";
     renderWorkflow();
 }
 
@@ -138,20 +133,31 @@ function renderWorkflow() {
 }
 
 
-// ─── Gestionar Agentes ───────────────────────────────────────────────
+// ─── Navegación de vistas ───────────────────────────────────────────────
 
-function switchSidebarTab(tab, btn) {
-    document.querySelectorAll(".sidebar-tab").forEach(t => t.classList.remove("active"));
-    document.querySelectorAll(".sidebar-panel").forEach(p => p.classList.remove("active"));
-    btn.classList.add("active");
-    document.getElementById(`sidebar-panel-${tab}`).classList.add("active");
-    if (tab === "llm") {
+function switchView(view, btn) {
+    document.querySelectorAll(".sidebar-nav-item").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+    // btn puede ser el elemento o el selector
+    const navBtn = btn instanceof Element ? btn : document.querySelector(`[data-view="${view}"]`);
+    if (navBtn) navBtn.classList.add("active");
+    const viewEl = document.getElementById(`view-${view}`);
+    if (viewEl) viewEl.classList.add("active");
+    if (view === "modelos") {
         renderLLMPanel();
         if (!realQuotaData) fetchRealQuota();
     }
-    if (tab === "manage") {
+    if (view === "agregar") {
         openManagePanel();
     }
+}
+
+// ─── Gestionar Agentes ───────────────────────────────────────────────
+
+// kept: switchSidebarTab ahora delega a switchView
+function switchSidebarTab(tab, btn) {
+    const map = { agents: "agentes", llm: "modelos", manage: "agregar" };
+    switchView(map[tab] || tab, btn);
 }
 
 async function openManagePanel() {
@@ -625,9 +631,7 @@ function buildModelOptions(selectedId) {
 }
 
 function toggleLLMPanel() {
-    // Abre el tab LLM en el sidebar
-    const tabBtn = document.querySelector('.sidebar-tab[data-tab="llm"]');
-    if (tabBtn) switchSidebarTab("llm", tabBtn);
+    switchView("modelos", document.querySelector('[data-view="modelos"]'));
 }
 
 async function fetchRealQuota() {
@@ -758,7 +762,7 @@ function addUsageRecord(agentId, model, usage) {
         total: usage.total_tokens || 0,
         time: now.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
     });
-    if (document.getElementById("sidebar-panel-llm").classList.contains("active")) renderLLMPanel();
+    if (document.getElementById("view-modelos").classList.contains("active")) renderLLMPanel();
 }
 
 function appendTokenBadge(bubble, usage, model) {

@@ -11,8 +11,8 @@
 <body>
     <div class="app-layout">
 
-        <!-- ─── SIDEBAR ──────────────────────────────────────── -->
-        <aside class="sidebar" id="sidebar">
+        <!-- ─── SIDEBAR / NAV ───────────────────────────────── -->
+        <aside class="sidebar">
             <div class="sidebar-logo">
                 <div class="logo-icon">🛸</div>
                 <div class="logo-text">
@@ -21,161 +21,180 @@
                 </div>
             </div>
 
-            <!-- Estadísticas -->
-            <div class="sidebar-stats">
-                <div class="stat">
-                    <div class="stat-value" id="agents-count">—</div>
-                    <div class="stat-label">Agentes</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-value" id="skills-count">—</div>
-                    <div class="stat-label">Skills</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-value" id="outputs-count">0</div>
-                    <div class="stat-label">Outputs</div>
-                </div>
-            </div>
-
-            <!-- Nav tabs -->
             <nav class="sidebar-nav">
-                <button class="sidebar-tab active" data-tab="agents" onclick="switchSidebarTab('agents', this)">
-                    🤖 Agentes
+                <button class="sidebar-nav-item active" data-view="inicio" onclick="switchView('inicio', this)">
+                    <span class="nav-icon">🏠</span> Inicio
                 </button>
-                <button class="sidebar-tab" data-tab="llm" onclick="switchSidebarTab('llm', this)">
-                    ⚡ Modelos LLM
+                <button class="sidebar-nav-item" data-view="agentes" onclick="switchView('agentes', this)">
+                    <span class="nav-icon">🤖</span> Agentes
+                    <span class="nav-badge" id="nav-badge-agents"></span>
                 </button>
-                <button class="sidebar-tab" data-tab="manage" onclick="switchSidebarTab('manage', this)">
-                    ⚙️ Gestionar
+                <button class="sidebar-nav-item" data-view="modelos" onclick="switchView('modelos', this)">
+                    <span class="nav-icon">⚡</span> Modelos
                 </button>
             </nav>
 
-            <!-- Panel: Agentes -->
-            <div class="sidebar-panel active" id="sidebar-panel-agents">
-                <div class="agents-grid-sidebar" id="agents-grid"></div>
+            <div class="sidebar-footer">
+                <span id="server-status" class="server-status-dot">⚪ CONECTANDO...</span>
+            </div>
+        </aside>
+
+        <!-- ─── BODY / VISTAS ───────────────────────────────── -->
+        <main class="main-content">
+
+            <!-- VISTA: INICIO ───────────────────────────────── -->
+            <div class="view active" id="view-inicio">
+                <div class="view-header">
+                    <h2>Flujo de trabajo</h2>
+                    <div class="section-line"></div>
+                </div>
+                <div class="workflow-section">
+                    <div class="workflow" id="workflow-inner">
+                        <!-- generado dinámicamente por renderWorkflow() -->
+                    </div>
+                    <div class="workflow-note">
+                        💡 Hacé click en un paso del flujo para abrir el chat directamente.
+                        También podés adjuntar un <strong>.doc/.docx</strong> desde cualquier agente.
+                    </div>
+                </div>
+
+                <!-- Playwright Inspector -->
+                <div class="view-header" style="margin-top:48px">
+                    <h2>🔍 Playwright Inspector</h2>
+                    <div class="section-line"></div>
+                </div>
+                <div class="inspector-section" id="inspector-section">
+                    <div class="inspector-url-bar">
+                        <input type="url" id="inspector-url" placeholder="https://tu-app.com/pagina"
+                            autocomplete="off" />
+                        <button class="btn-inspect" id="btn-inspect" onclick="runInspector()">🔍 Inspeccionar</button>
+                    </div>
+                    <div class="inspector-loading" id="inspector-loading" style="display:none">
+                        <span class="spinner"></span> Inspeccionando con Playwright… esto puede tardar unos segundos.
+                    </div>
+                    <div class="inspector-results" id="inspector-results" style="display:none">
+                        <div class="inspector-top-bar">
+                            <div class="inspector-filters" id="inspector-filters">
+                                <button class="filter-btn active" data-filter="all"
+                                    onclick="filterInspector(this)">Todos</button>
+                                <button class="filter-btn" data-filter="input"
+                                    onclick="filterInspector(this)">Inputs</button>
+                                <button class="filter-btn" data-filter="button"
+                                    onclick="filterInspector(this)">Botones</button>
+                                <button class="filter-btn" data-filter="a"
+                                    onclick="filterInspector(this)">Links</button>
+                                <button class="filter-btn" data-filter="select"
+                                    onclick="filterInspector(this)">Selects</button>
+                            </div>
+                            <div class="inspector-actions">
+                                <button class="btn-inspector-action" onclick="copyInspectorJson()">📋 Copiar
+                                    JSON</button>
+                                <button class="btn-inspector-action" onclick="saveInspectorJson()">💾 Guardar
+                                    JSON</button>
+                                <button class="btn-inspector-action accent" onclick="sendToPlaywrightAgent()">⚡ Usar en
+                                    Playwright Agent</button>
+                            </div>
+                        </div>
+                        <div class="inspector-meta" id="inspector-meta"></div>
+                        <div class="inspector-screenshot-wrap" id="inspector-screenshot-wrap" style="display:none">
+                            <img id="inspector-screenshot" src="" alt="Screenshot" />
+                        </div>
+                        <div class="inspector-table-wrap">
+                            <table class="inspector-table" id="inspector-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Tipo</th>
+                                        <th>Etiqueta / Texto</th>
+                                        <th>Playwright Locator</th>
+                                        <th>XPath</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inspector-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="inspector-error" id="inspector-error" style="display:none"></div>
+                </div>
             </div>
 
-            <!-- Panel: LLMs -->
-            <div class="sidebar-panel" id="sidebar-panel-llm">
-                <div class="llm-section">
-                    <div class="llm-section-title">Modelo activo</div>
-                    <select id="global-model-select" class="model-select-global"
-                        onchange="setGlobalModel(this.value)"></select>
-                    <p class="llm-model-hint">Aplica a nuevos chats. Los puntos <strong>●●●</strong> indican costo
-                        relativo.</p>
+            <!-- VISTA: AGENTES ──────────────────────────────── -->
+            <div class="view" id="view-agentes">
+                <div class="view-header">
+                    <h2>Agentes</h2>
+                    <div class="section-line"></div>
+                    <button class="btn-view-action"
+                        onclick="switchView('agregar', document.querySelector('[data-view=agregar]'))">
+                        ➕ Agregar agente
+                    </button>
                 </div>
-                <div class="llm-section">
-                    <div class="llm-section-title"
-                        style="display:flex;justify-content:space-between;align-items:center">
-                        <span>Cuota real</span>
-                        <button class="btn-quota-refresh" id="btn-refresh-quota" onclick="fetchRealQuota()">🔄</button>
-                    </div>
-                    <div id="real-quota-box">
-                        <p class="llm-empty">Hacé click en 🔄 para ver la cuota real.</p>
-                    </div>
-                </div>
-                <div class="llm-section">
-                    <div class="llm-section-title">Consumo en sesión</div>
-                    <p class="llm-model-hint" style="margin-bottom:6px">Tokens usados en esta sesión.</p>
-                    <div id="llm-limits"></div>
-                </div>
-                <div class="llm-section">
-                    <div class="llm-section-title">Sesión actual</div>
-                    <div id="llm-stats">
-                        <p class="llm-empty">Sin actividad</p>
-                    </div>
-                </div>
-                <div class="llm-section">
-                    <div class="llm-section-title">Historial de requests</div>
-                    <div class="llm-log" id="llm-log">
-                        <p class="llm-empty">Sin actividad</p>
-                    </div>
-                </div>
+                <div class="agents-grid" id="agents-grid"></div>
             </div>
 
-            <!-- Panel: Gestionar -->
-            <div class="sidebar-panel" id="sidebar-panel-manage">
+            <!-- VISTA: AGREGAR AGENTE ───────────────────────── -->
+            <div class="view" id="view-agregar">
+                <div class="view-header">
+                    <h2>Gestionar Agentes</h2>
+                    <div class="section-line"></div>
+                    <button class="btn-view-action secondary"
+                        onclick="switchView('agentes', document.querySelector('[data-view=agentes]'))">
+                        ← Volver
+                    </button>
+                </div>
                 <div id="manage-modal-body">
                     <!-- generado dinámicamente por renderManageModal() -->
                 </div>
             </div>
-        </aside>
 
-        <!-- ─── MAIN ─────────────────────────────────────────── -->
-        <main class="main-content">
-            <div class="section-header">
-                <h2>Flujo de trabajo</h2>
-                <div class="section-line"></div>
-                <span id="server-status"
-                    style="font-family:var(--mono);font-size:11px;color:var(--text-muted);white-space:nowrap">⚪
-                    CONECTANDO...</span>
-            </div>
-
-            <div class="workflow-section">
-                <div class="workflow" id="workflow-inner">
-                    <!-- generado dinámicamente por renderWorkflow() -->
+            <!-- VISTA: MODELOS ──────────────────────────────── -->
+            <div class="view" id="view-modelos">
+                <div class="view-header">
+                    <h2>Modelos LLM</h2>
+                    <div class="section-line"></div>
                 </div>
-                <div class="workflow-note">
-                    💡 Hacé click en un paso del flujo para abrir el chat directamente.
-                    También podés adjuntar un <strong>.doc/.docx</strong> desde cualquier agente.
-                </div>
-            </div>
-
-            <!-- ─── Playwright Inspector ─────────────────────── -->
-            <div class="section-header" style="margin-top:40px">
-                <h2>🔍 Playwright Inspector</h2>
-                <div class="section-line"></div>
-            </div>
-
-            <div class="inspector-section" id="inspector-section">
-                <div class="inspector-url-bar">
-                    <input type="url" id="inspector-url" placeholder="https://tu-app.com/pagina" autocomplete="off" />
-                    <button class="btn-inspect" id="btn-inspect" onclick="runInspector()">🔍 Inspeccionar</button>
-                </div>
-                <div class="inspector-loading" id="inspector-loading" style="display:none">
-                    <span class="spinner"></span> Inspeccionando con Playwright… esto puede tardar unos segundos.
-                </div>
-                <div class="inspector-results" id="inspector-results" style="display:none">
-                    <div class="inspector-top-bar">
-                        <div class="inspector-filters" id="inspector-filters">
-                            <button class="filter-btn active" data-filter="all"
-                                onclick="filterInspector(this)">Todos</button>
-                            <button class="filter-btn" data-filter="input"
-                                onclick="filterInspector(this)">Inputs</button>
-                            <button class="filter-btn" data-filter="button"
-                                onclick="filterInspector(this)">Botones</button>
-                            <button class="filter-btn" data-filter="a" onclick="filterInspector(this)">Links</button>
-                            <button class="filter-btn" data-filter="select"
-                                onclick="filterInspector(this)">Selects</button>
+                <div class="models-view-body">
+                    <div class="llm-section">
+                        <div class="llm-section-title">Modelo activo</div>
+                        <select id="global-model-select" class="model-select-global"
+                            onchange="setGlobalModel(this.value)"></select>
+                        <p class="llm-model-hint">Este modelo se usa en todos los chats nuevos. También podés cambiarlo
+                            por sesión desde el chat. Los puntos <strong>●●●</strong> indican costo relativo de tokens.
+                        </p>
+                    </div>
+                    <div class="llm-section">
+                        <div class="llm-section-title"
+                            style="display:flex;justify-content:space-between;align-items:center">
+                            <span>Cuota real disponible</span>
+                            <button class="btn-quota-refresh" id="btn-refresh-quota" onclick="fetchRealQuota()">🔄
+                                Actualizar</button>
                         </div>
-                        <div class="inspector-actions">
-                            <button class="btn-inspector-action" onclick="copyInspectorJson()">📋 Copiar JSON</button>
-                            <button class="btn-inspector-action" onclick="saveInspectorJson()">💾 Guardar JSON</button>
-                            <button class="btn-inspector-action accent" onclick="sendToPlaywrightAgent()">⚡ Usar en
-                                Playwright Agent</button>
+                        <p class="llm-model-hint" style="margin-bottom:8px">Datos reales desde la API de GitHub Models
+                            para el modelo activo.</p>
+                        <div id="real-quota-box">
+                            <p class="llm-empty">Hacé click en Actualizar para ver la cuota real.</p>
                         </div>
                     </div>
-                    <div class="inspector-meta" id="inspector-meta"></div>
-                    <div class="inspector-screenshot-wrap" id="inspector-screenshot-wrap" style="display:none">
-                        <img id="inspector-screenshot" src="" alt="Screenshot" />
+                    <div class="llm-section">
+                        <div class="llm-section-title">Consumo en sesión por modelo</div>
+                        <p class="llm-model-hint" style="margin-bottom:6px">Tokens usados en esta sesión del browser.
+                        </p>
+                        <div id="llm-limits"></div>
                     </div>
-                    <div class="inspector-table-wrap">
-                        <table class="inspector-table" id="inspector-table">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Tipo</th>
-                                    <th>Etiqueta / Texto</th>
-                                    <th>Playwright Locator</th>
-                                    <th>XPath</th>
-                                </tr>
-                            </thead>
-                            <tbody id="inspector-tbody"></tbody>
-                        </table>
+                    <div class="llm-section">
+                        <div class="llm-section-title">Sesión actual</div>
+                        <div id="llm-stats">
+                            <p class="llm-empty">Sin actividad</p>
+                        </div>
+                    </div>
+                    <div class="llm-section">
+                        <div class="llm-section-title">Historial de requests</div>
+                        <div class="llm-log" id="llm-log">
+                            <p class="llm-empty">Sin actividad en esta sesión</p>
+                        </div>
                     </div>
                 </div>
-                <div class="inspector-error" id="inspector-error" style="display:none"></div>
             </div>
+
         </main>
     </div>
 
@@ -229,6 +248,225 @@
     </div>
 
     <script src="panel.js"></script>
+</body>
+
+</html>
+<div class="app-layout">
+
+    <!-- ─── SIDEBAR ──────────────────────────────────────── -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-logo">
+            <div class="logo-icon">🛸</div>
+            <div class="logo-text">
+                <h1>Control de Agentes</h1>
+                <p>TESTING AGENTS WORKSPACE</p>
+            </div>
+        </div>
+
+        <!-- Estadísticas -->
+        <div class="sidebar-stats">
+            <div class="stat">
+                <div class="stat-value" id="agents-count">—</div>
+                <div class="stat-label">Agentes</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="skills-count">—</div>
+                <div class="stat-label">Skills</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="outputs-count">0</div>
+                <div class="stat-label">Outputs</div>
+            </div>
+        </div>
+
+        <!-- Nav tabs -->
+        <nav class="sidebar-nav">
+            <button class="sidebar-tab active" data-tab="agents" onclick="switchSidebarTab('agents', this)">
+                🤖 Agentes
+            </button>
+            <button class="sidebar-tab" data-tab="llm" onclick="switchSidebarTab('llm', this)">
+                ⚡ Modelos LLM
+            </button>
+            <button class="sidebar-tab" data-tab="manage" onclick="switchSidebarTab('manage', this)">
+                ⚙️ Gestionar
+            </button>
+        </nav>
+
+        <!-- Panel: Agentes -->
+        <div class="sidebar-panel active" id="sidebar-panel-agents">
+            <div class="agents-grid-sidebar" id="agents-grid"></div>
+        </div>
+
+        <!-- Panel: LLMs -->
+        <div class="sidebar-panel" id="sidebar-panel-llm">
+            <div class="llm-section">
+                <div class="llm-section-title">Modelo activo</div>
+                <select id="global-model-select" class="model-select-global"
+                    onchange="setGlobalModel(this.value)"></select>
+                <p class="llm-model-hint">Aplica a nuevos chats. Los puntos <strong>●●●</strong> indican costo
+                    relativo.</p>
+            </div>
+            <div class="llm-section">
+                <div class="llm-section-title" style="display:flex;justify-content:space-between;align-items:center">
+                    <span>Cuota real</span>
+                    <button class="btn-quota-refresh" id="btn-refresh-quota" onclick="fetchRealQuota()">🔄</button>
+                </div>
+                <div id="real-quota-box">
+                    <p class="llm-empty">Hacé click en 🔄 para ver la cuota real.</p>
+                </div>
+            </div>
+            <div class="llm-section">
+                <div class="llm-section-title">Consumo en sesión</div>
+                <p class="llm-model-hint" style="margin-bottom:6px">Tokens usados en esta sesión.</p>
+                <div id="llm-limits"></div>
+            </div>
+            <div class="llm-section">
+                <div class="llm-section-title">Sesión actual</div>
+                <div id="llm-stats">
+                    <p class="llm-empty">Sin actividad</p>
+                </div>
+            </div>
+            <div class="llm-section">
+                <div class="llm-section-title">Historial de requests</div>
+                <div class="llm-log" id="llm-log">
+                    <p class="llm-empty">Sin actividad</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel: Gestionar -->
+        <div class="sidebar-panel" id="sidebar-panel-manage">
+            <div id="manage-modal-body">
+                <!-- generado dinámicamente por renderManageModal() -->
+            </div>
+        </div>
+    </aside>
+
+    <!-- ─── MAIN ─────────────────────────────────────────── -->
+    <main class="main-content">
+        <div class="section-header">
+            <h2>Flujo de trabajo</h2>
+            <div class="section-line"></div>
+            <span id="server-status"
+                style="font-family:var(--mono);font-size:11px;color:var(--text-muted);white-space:nowrap">⚪
+                CONECTANDO...</span>
+        </div>
+
+        <div class="workflow-section">
+            <div class="workflow" id="workflow-inner">
+                <!-- generado dinámicamente por renderWorkflow() -->
+            </div>
+            <div class="workflow-note">
+                💡 Hacé click en un paso del flujo para abrir el chat directamente.
+                También podés adjuntar un <strong>.doc/.docx</strong> desde cualquier agente.
+            </div>
+        </div>
+
+        <!-- ─── Playwright Inspector ─────────────────────── -->
+        <div class="section-header" style="margin-top:40px">
+            <h2>🔍 Playwright Inspector</h2>
+            <div class="section-line"></div>
+        </div>
+
+        <div class="inspector-section" id="inspector-section">
+            <div class="inspector-url-bar">
+                <input type="url" id="inspector-url" placeholder="https://tu-app.com/pagina" autocomplete="off" />
+                <button class="btn-inspect" id="btn-inspect" onclick="runInspector()">🔍 Inspeccionar</button>
+            </div>
+            <div class="inspector-loading" id="inspector-loading" style="display:none">
+                <span class="spinner"></span> Inspeccionando con Playwright… esto puede tardar unos segundos.
+            </div>
+            <div class="inspector-results" id="inspector-results" style="display:none">
+                <div class="inspector-top-bar">
+                    <div class="inspector-filters" id="inspector-filters">
+                        <button class="filter-btn active" data-filter="all"
+                            onclick="filterInspector(this)">Todos</button>
+                        <button class="filter-btn" data-filter="input" onclick="filterInspector(this)">Inputs</button>
+                        <button class="filter-btn" data-filter="button" onclick="filterInspector(this)">Botones</button>
+                        <button class="filter-btn" data-filter="a" onclick="filterInspector(this)">Links</button>
+                        <button class="filter-btn" data-filter="select" onclick="filterInspector(this)">Selects</button>
+                    </div>
+                    <div class="inspector-actions">
+                        <button class="btn-inspector-action" onclick="copyInspectorJson()">📋 Copiar JSON</button>
+                        <button class="btn-inspector-action" onclick="saveInspectorJson()">💾 Guardar JSON</button>
+                        <button class="btn-inspector-action accent" onclick="sendToPlaywrightAgent()">⚡ Usar en
+                            Playwright Agent</button>
+                    </div>
+                </div>
+                <div class="inspector-meta" id="inspector-meta"></div>
+                <div class="inspector-screenshot-wrap" id="inspector-screenshot-wrap" style="display:none">
+                    <img id="inspector-screenshot" src="" alt="Screenshot" />
+                </div>
+                <div class="inspector-table-wrap">
+                    <table class="inspector-table" id="inspector-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Tipo</th>
+                                <th>Etiqueta / Texto</th>
+                                <th>Playwright Locator</th>
+                                <th>XPath</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inspector-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="inspector-error" id="inspector-error" style="display:none"></div>
+        </div>
+    </main>
+</div>
+
+<!-- Modal: Ver Prompt -->
+<div class="modal-overlay" id="modal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="modal-title"></h3>
+            <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <pre id="modal-content"></pre>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Chat con agente -->
+<div class="modal-overlay" id="chat-modal">
+    <div class="modal chat-modal-box">
+        <div class="modal-header">
+            <h3 id="chat-modal-title"></h3>
+            <div style="display:flex;gap:8px;align-items:center">
+                <select id="chat-model-select" class="model-select-inline"
+                    onchange="setActiveChatModel(this.value)"></select>
+                <button class="btn-save-md" id="btn-save-md" onclick="saveMd()" style="display:none">💾 Guardar
+                    .md</button>
+                <button class="modal-close" onclick="closeChatModal()">✕</button>
+            </div>
+        </div>
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-input-area">
+            <div class="chat-file-bar" id="chat-file-bar" style="display:none">
+                <span class="chat-file-name" id="chat-file-name"></span>
+                <button class="chat-file-remove" onclick="removeAttachment()" title="Quitar archivo">✕</button>
+            </div>
+            <textarea id="chat-input" class="chat-textarea" placeholder="Escribí tu mensaje o pegá el documento aquí..."
+                rows="3"></textarea>
+            <div class="chat-input-actions">
+                <div style="display:flex;align-items:center;gap:10px">
+                    <label class="btn-attach" title="Adjuntar .doc o .docx">
+                        📎 Adjuntar .doc/.docx
+                        <input type="file" id="file-input" accept=".doc,.docx" style="display:none"
+                            onchange="handleFileAttach(this)">
+                    </label>
+                    <span class="chat-hint" id="chat-hint"></span>
+                </div>
+                <button class="btn-invoke" id="btn-send" onclick="sendMessage()">⚡ Enviar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="panel.js"></script>
 </body>
 
 </html>
