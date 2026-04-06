@@ -2210,3 +2210,622 @@ margin-bottom: 20px;
 .chat-file-remove:hover {
     color: var(--accent3);
 }
+/* =====================================================================
+   NUEVAS SECCIONES — Mission Control v2.0
+   ===================================================================== */
+
+/* ─── NAV GROUP LABELS ────────────────────────────────────── */
+.nav-group-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    padding: 14px 14px 4px;
+    opacity: 0.6;
+}
+
+.nav-badge.warning {
+    background: var(--warn);
+    color: var(--bg);
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 11px;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 50%;
+}
+
+/* ─── CONFIG VIEW ─────────────────────────────────────────── */
+.config-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+    max-width: 720px;
+}
+
+.config-section-title {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.config-required-badge {
+    background: rgba(0,212,255,0.15);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    font-size: 10px;
+    padding: 1px 7px;
+    border-radius: 8px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.config-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+    line-height: 1.6;
+}
+
+.config-hint a { color: var(--accent); }
+
+.config-field {
+    margin-bottom: 12px;
+}
+
+.config-field label {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+}
+
+.config-field-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.config-field-row input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 9px 14px;
+    outline: none;
+    transition: border-color 0.18s;
+}
+
+.config-field-row input:focus { border-color: var(--accent); }
+
+.config-status {
+    font-family: var(--mono);
+    font-size: 14px;
+    flex-shrink: 0;
+    width: 24px;
+    text-align: center;
+}
+
+.config-status.is-configured { color: var(--accent2); }
+.config-status.not-configured { color: var(--text-muted); }
+
+.config-actions { max-width: 720px; margin-top: 8px; }
+
+.config-hint-box {
+    background: rgba(0,212,255,0.05);
+    border: 1px solid rgba(0,212,255,0.15);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    max-width: 720px;
+}
+
+.config-hint-box code {
+    background: var(--surface2);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+}
+
+/* ─── HISTORIAL VIEW ──────────────────────────────────────── */
+.historial-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 12px;
+}
+
+.historial-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: border-color 0.18s, background 0.18s;
+}
+
+.historial-card:hover {
+    border-color: var(--accent);
+    background: rgba(0,212,255,0.04);
+}
+
+.historial-card-icon {
+    font-size: 28px;
+    flex-shrink: 0;
+}
+
+.historial-card-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.historial-card-name {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 3px;
+}
+
+.historial-card-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.historial-card-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+/* ─── MCP VIEW ────────────────────────────────────────────── */
+.mcp-list { display: flex; flex-direction: column; gap: 10px; max-width: 720px; }
+
+.mcp-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+}
+
+.mcp-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.mcp-card-name {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.mcp-card-detail {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    background: var(--surface2);
+    padding: 6px 10px;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    word-break: break-all;
+}
+
+.mcp-card-env {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    color: var(--text-muted);
+    align-items: center;
+}
+
+/* ─── JIRA VIEW ───────────────────────────────────────────── */
+.jira-toolbar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.jira-jql-input {
+    flex: 1;
+    min-width: 200px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 9px 14px;
+    outline: none;
+    transition: border-color 0.18s;
+}
+
+.jira-jql-input:focus { border-color: var(--accent); }
+
+.jira-total {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+}
+
+.jira-table-wrap {
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+}
+
+.jira-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.jira-table thead tr {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+}
+
+.jira-table th {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 10px 14px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.jira-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: middle;
+}
+
+.jira-table tbody tr:hover { background: rgba(0,212,255,0.03); }
+
+.jira-key {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.jira-type, .jira-status {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 6px;
+    background: var(--surface2);
+    font-family: var(--mono);
+}
+
+.jira-summary { color: var(--text); max-width: 300px; }
+
+.jira-actions { display: flex; gap: 6px; }
+
+.jira-status-ok {
+    background: rgba(126,231,135,0.1);
+    border: 1px solid rgba(126,231,135,0.3);
+    color: var(--accent2);
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 16px;
+}
+
+.jira-status-error {
+    background: rgba(247,129,102,0.1);
+    border: 1px solid rgba(247,129,102,0.3);
+    color: var(--accent3);
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 16px;
+}
+
+/* ─── FORMS (shared) ──────────────────────────────────────── */
+.form-group {
+    margin-bottom: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.form-group label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+}
+
+.form-required { color: var(--accent3); }
+
+.form-group input, .form-group textarea {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    padding: 9px 13px;
+    outline: none;
+    transition: border-color 0.18s;
+    width: 100%;
+    resize: vertical;
+}
+
+.form-group input:focus, .form-group textarea:focus { border-color: var(--accent); }
+
+.form-group input:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.form-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+.form-hint code {
+    background: var(--surface2);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+}
+
+.form-row {
+    display: flex;
+    gap: 12px;
+}
+
+/* ─── AGENT EDITOR MODAL ──────────────────────────────────── */
+.agent-editor-modal-box {
+    width: 90vw;
+    max-width: 640px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.agent-editor-body {
+    overflow-y: auto;
+    max-height: calc(90vh - 80px);
+}
+
+.agent-editor-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding-top: 14px;
+    margin-top: 4px;
+    border-top: 1px solid var(--border);
+}
+
+.btn-modal-cancel {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-family: var(--sans);
+    font-size: 13px;
+    padding: 9px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.18s;
+}
+
+.btn-modal-cancel:hover { border-color: var(--text-muted); color: var(--text); }
+
+.btn-modal-save {
+    background: var(--accent);
+    border: none;
+    color: var(--bg);
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 13px;
+    padding: 9px 22px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.18s;
+}
+
+.btn-modal-save:hover { filter: brightness(1.1); }
+
+.btn-modal-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ─── OUTPUT VIEWER MODAL ─────────────────────────────────── */
+.output-viewer-modal-box {
+    width: 92vw;
+    max-width: 860px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.output-viewer-body {
+    overflow-y: auto;
+    max-height: calc(90vh - 80px);
+    padding: 20px 24px;
+}
+
+.output-viewer-body h1 { font-size: 20px; margin-bottom: 12px; color: var(--accent); }
+.output-viewer-body h2 { font-size: 16px; margin: 18px 0 8px; color: var(--text); }
+.output-viewer-body h3 { font-size: 14px; margin: 14px 0 6px; color: var(--text-muted); }
+.output-viewer-body p { margin-bottom: 10px; line-height: 1.7; font-size: 13px; }
+.output-viewer-body table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 12px; }
+.output-viewer-body th { background: var(--surface2); padding: 8px 12px; border: 1px solid var(--border); }
+.output-viewer-body td { padding: 7px 12px; border: 1px solid var(--border); }
+.output-viewer-body code { font-family: var(--mono); font-size: 11px; background: var(--surface2); padding: 1px 5px; border-radius: 4px; }
+.output-viewer-body pre { background: var(--surface2); padding: 14px; border-radius: 8px; overflow-x: auto; margin-bottom: 12px; }
+
+
+/* ─── COPY RESPONSE BUTTON ───────────────────────────────── */
+.btn-copy-response {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-top: 6px;
+    transition: all 0.18s;
+    letter-spacing: 0.5px;
+}
+
+.btn-copy-response:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0, 212, 255, 0.06);
+}
+
+/* ─── NUEVA CONVERSACIÓN BUTTON ───────────────────────────── */
+.btn-new-conversation {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.18s;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.btn-new-conversation:hover {
+    border-color: var(--accent3);
+    color: var(--accent3);
+    background: rgba(247, 129, 102, 0.06);
+}
+
+/* ─── LOCALSTORAGE WARNING BADGE ──────────────────────────── */
+.ls-warn-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--warn);
+    background: rgba(227, 179, 65, 0.1);
+    border: 1px solid rgba(227, 179, 65, 0.35);
+    padding: 3px 9px;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.18s;
+}
+
+.ls-warn-badge:hover {
+    background: rgba(227, 179, 65, 0.2);
+}
+
+.ls-warn-badge.ls-warn-danger {
+    color: var(--accent3);
+    background: rgba(247, 129, 102, 0.1);
+    border-color: rgba(247, 129, 102, 0.35);
+}
+
+.ls-warn-badge.ls-warn-danger:hover {
+    background: rgba(247, 129, 102, 0.2);
+}
+
+/* ─── JIRA CONNECTION PANEL ───────────────────────────────── */
+.jira-conn-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.jira-conn-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text);
+    transition: background 0.15s;
+    user-select: none;
+}
+
+.jira-conn-header:hover {
+    background: rgba(255,255,255,0.03);
+}
+
+.jira-conn-chevron {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.jira-conn-body {
+    padding: 0 18px 18px;
+    border-top: 1px solid var(--border);
+}
+
+.jira-conn-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 6px;
+}
+
+.jira-conn-panel.jira-conn-collapsed .jira-conn-header {
+    color: var(--accent2);
+}
+
+.jira-not-configured {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.jira-not-configured .form-hint {
+    margin-top: 10px;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+}

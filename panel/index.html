@@ -22,6 +22,7 @@
             </div>
 
             <nav class="sidebar-nav">
+                <div class="nav-group-label">WORKSPACE</div>
                 <button class="sidebar-nav-item active" data-view="inicio" onclick="switchView('inicio', this)">
                     <span class="nav-icon">🏠</span> Inicio
                 </button>
@@ -29,8 +30,24 @@
                     <span class="nav-icon">🤖</span> Agentes
                     <span class="nav-badge" id="nav-badge-agents"></span>
                 </button>
+                <button class="sidebar-nav-item" data-view="historial" onclick="switchView('historial', this)">
+                    <span class="nav-icon">📁</span> Historial
+                    <span class="nav-badge" id="nav-badge-outputs"></span>
+                </button>
+                <div class="nav-group-label">HERRAMIENTAS</div>
                 <button class="sidebar-nav-item" data-view="modelos" onclick="switchView('modelos', this)">
-                    <span class="nav-icon">⚡</span> Modelos
+                    <span class="nav-icon">⚡</span> Modelos LLM
+                </button>
+                <button class="sidebar-nav-item" data-view="mcps" onclick="switchView('mcps', this)">
+                    <span class="nav-icon">🔌</span> MCPs
+                </button>
+                <button class="sidebar-nav-item" data-view="jira" onclick="switchView('jira', this)">
+                    <span class="nav-icon">🔗</span> Jira
+                </button>
+                <div class="nav-group-label">SISTEMA</div>
+                <button class="sidebar-nav-item" data-view="configuracion" onclick="switchView('configuracion', this)">
+                    <span class="nav-icon">⚙️</span> Configuración
+                    <span class="nav-badge warning" id="nav-badge-config" style="display:none">!</span>
                 </button>
             </nav>
 
@@ -123,10 +140,14 @@
                 <div class="view-header">
                     <h2>Agentes</h2>
                     <div class="section-line"></div>
-                    <button class="btn-view-action"
-                        onclick="switchView('agregar', document.querySelector('[data-view=agregar]'))">
-                        ➕ Agregar agente
-                    </button>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                        <button class="btn-view-action" onclick="openCreateAgentModal()">➕ Crear agente</button>
+                        <button class="btn-view-action secondary" onclick="openImportGithubModal()">⬇️ Importar de
+                            GitHub</button>
+                        <button class="btn-view-action secondary"
+                            onclick="switchView('agregar', document.querySelector('[data-view=agregar]'))">🗂️
+                            Gestionar</button>
+                    </div>
                 </div>
                 <div class="agents-grid" id="agents-grid"></div>
             </div>
@@ -143,6 +164,18 @@
                 </div>
                 <div id="manage-modal-body">
                     <!-- generado dinámicamente por renderManageModal() -->
+                </div>
+            </div>
+
+            <!-- VISTA: HISTORIAL ──────────────────────────────── -->
+            <div class="view" id="view-historial">
+                <div class="view-header">
+                    <h2>Historial de Outputs</h2>
+                    <div class="section-line"></div>
+                    <button class="btn-view-action secondary" onclick="loadHistorial()">🔄 Actualizar</button>
+                </div>
+                <div id="historial-body">
+                    <p class="llm-empty">Cargando historial...</p>
                 </div>
             </div>
 
@@ -195,6 +228,45 @@
                 </div>
             </div>
 
+            <!-- VISTA: MCPs ──────────────────────────────────── -->
+            <div class="view" id="view-mcps">
+                <div class="view-header">
+                    <h2>Servidores MCP</h2>
+                    <div class="section-line"></div>
+                    <button class="btn-view-action" onclick="openAddMcpModal()">➕ Agregar servidor</button>
+                </div>
+                <div class="config-hint-box">
+                    <p>Los MCPs (Model Context Protocol) agregan herramientas a GitHub Copilot. Se guardan en
+                        <code>.vscode/mcp.json</code> de este workspace y están disponibles automáticamente en VS Code.
+                    </p>
+                </div>
+                <div id="mcps-body">
+                    <p class="llm-empty">Cargando MCPs...</p>
+                </div>
+            </div>
+
+            <!-- VISTA: JIRA ──────────────────────────────────── -->
+            <div class="view" id="view-jira">
+                <div class="view-header">
+                    <h2>🔗 Jira — Delegación de tareas</h2>
+                    <div class="section-line"></div>
+                </div>
+                <div id="jira-body">
+                    <p class="llm-empty">Cargando...</p>
+                </div>
+            </div>
+
+            <!-- VISTA: CONFIGURACIÓN ─────────────────────────── -->
+            <div class="view" id="view-configuracion">
+                <div class="view-header">
+                    <h2>⚙️ Configuración del Sistema</h2>
+                    <div class="section-line"></div>
+                </div>
+                <div id="config-body">
+                    <p class="llm-empty">Cargando configuración...</p>
+                </div>
+            </div>
+
         </main>
     </div>
 
@@ -216,9 +288,15 @@
         <div class="modal chat-modal-box">
             <div class="modal-header">
                 <h3 id="chat-modal-title"></h3>
-                <div style="display:flex;gap:8px;align-items:center">
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                     <select id="chat-model-select" class="model-select-inline"
                         onchange="setActiveChatModel(this.value)"></select>
+                    <div id="model-compat-indicator"
+                        style="display:none;align-items:center;gap:5px;padding:3px 9px;background:rgba(255,255,255,0.04);border-radius:6px;border:1px solid var(--border)">
+                    </div>
+                    <div id="localstorage-warn" style="display:none"></div>
+                    <button class="btn-new-conversation" onclick="newConversation()"
+                        title="Borrar historial y empezar de cero">🗑️ Nueva conversación</button>
                     <button class="btn-save-md" id="btn-save-md" onclick="saveMd()" style="display:none">💾 Guardar
                         .md</button>
                     <button class="modal-close" onclick="closeChatModal()">✕</button>
@@ -247,7 +325,142 @@
         </div>
     </div>
 
-    <script src="panel.js?v=4"></script>
+    <!-- Modal: Crear/Editar Agente -->
+    <div class="modal-overlay" id="agent-editor-modal">
+        <div class="modal agent-editor-modal-box">
+            <div class="modal-header">
+                <h3 id="agent-editor-title">Crear agente</h3>
+                <button class="modal-close" onclick="closeAgentEditorModal()">✕</button>
+            </div>
+            <div class="modal-body agent-editor-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>ID del agente <span class="form-required">*</span></label>
+                        <input type="text" id="ae-id" placeholder="mi-agente" autocomplete="off" />
+                        <span class="form-hint">Solo letras, números y guiones. Nombre de carpeta.</span>
+                    </div>
+                    <div class="form-group" style="flex:0 0 90px">
+                        <label>Icono</label>
+                        <input type="text" id="ae-icon" placeholder="🤖" maxlength="4" autocomplete="off" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Nombre visible <span class="form-required">*</span></label>
+                    <input type="text" id="ae-name" placeholder="Mi Agente Especializado" autocomplete="off" />
+                </div>
+                <div class="form-group">
+                    <label>Descripción</label>
+                    <input type="text" id="ae-description" placeholder="Descripción del agente" autocomplete="off" />
+                </div>
+                <div class="form-group">
+                    <label>Paso en el flujo</label>
+                    <input type="text" id="ae-flow" placeholder="PRIMER PASO — Descripción" autocomplete="off" />
+                </div>
+                <div class="form-group">
+                    <label>Hint para el usuario</label>
+                    <input type="text" id="ae-hint" placeholder="Pegá el contenido del documento aquí."
+                        autocomplete="off" />
+                </div>
+                <div class="form-group">
+                    <label>Skills (uno por línea)</label>
+                    <textarea id="ae-skills" rows="3" placeholder="read-doc&#10;generate-testcases"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Prompt del sistema <span class="form-required">*</span></label>
+                    <textarea id="ae-prompt" rows="8" placeholder="Sos un especialista en... Tu tarea es..."></textarea>
+                </div>
+                <div class="agent-editor-actions">
+                    <button class="btn-modal-cancel" onclick="closeAgentEditorModal()">Cancelar</button>
+                    <button class="btn-modal-save" onclick="saveAgentFromEditor()">💾 Guardar agente</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Importar desde GitHub -->
+    <div class="modal-overlay" id="github-import-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>⬇️ Importar agente desde GitHub</h3>
+                <button class="modal-close" onclick="closeGithubImportModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>URL del repositorio o carpeta</label>
+                    <input type="url" id="github-import-url"
+                        placeholder="https://github.com/owner/repo o .../tree/main/agents/mi-agente"
+                        autocomplete="off" />
+                    <span class="form-hint">Para repos públicos no hace falta token.</span>
+                </div>
+                <div class="form-group">
+                    <label>Token de GitHub <em style="font-weight:400;color:var(--text-muted)">(solo para repos
+                            privados)</em></label>
+                    <input type="password" id="github-import-token" placeholder="ghp_..." autocomplete="off" />
+                    <span class="form-hint">Personal Access Token con scope <code>repo</code>. No se guarda en
+                        disco.</span>
+                </div>
+                <div id="github-import-status" style="margin-top:12px"></div>
+                <div class="agent-editor-actions">
+                    <button class="btn-modal-cancel" onclick="closeGithubImportModal()">Cancelar</button>
+                    <button class="btn-modal-save" id="btn-do-github-import" onclick="doGithubImport()">⬇️
+                        Importar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Agregar MCP -->
+    <div class="modal-overlay" id="mcp-add-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>➕ Agregar servidor MCP</h3>
+                <button class="modal-close" onclick="closeMcpAddModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Nombre del servidor <span class="form-required">*</span></label>
+                    <input type="text" id="mcp-name" placeholder="github" autocomplete="off" />
+                </div>
+                <div class="form-group">
+                    <label>Comando <span class="form-required">*</span></label>
+                    <input type="text" id="mcp-command" placeholder="npx" autocomplete="off" />
+                </div>
+                <div class="form-group">
+                    <label>Argumentos (uno por línea)</label>
+                    <textarea id="mcp-args" rows="3"
+                        placeholder="-y&#10;@modelcontextprotocol/server-github"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Variables de entorno (CLAVE=VALOR, una por línea)</label>
+                    <textarea id="mcp-env" rows="3" placeholder="GITHUB_TOKEN=${input:githubToken}"></textarea>
+                </div>
+                <div class="agent-editor-actions">
+                    <button class="btn-modal-cancel" onclick="closeMcpAddModal()">Cancelar</button>
+                    <button class="btn-modal-save" onclick="saveMcpServer()">💾 Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Viewer de output -->
+    <div class="modal-overlay" id="output-viewer-modal">
+        <div class="modal output-viewer-modal-box">
+            <div class="modal-header">
+                <h3 id="output-viewer-title">Output</h3>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <button class="btn-inspector-action" onclick="copyOutputContent()">📋 Copiar</button>
+                    <button class="btn-inspector-action" style="color:var(--accent3)"
+                        onclick="deleteCurrentOutput()">🗑️ Eliminar</button>
+                    <button class="modal-close" onclick="closeOutputViewer()">✕</button>
+                </div>
+            </div>
+            <div class="modal-body output-viewer-body">
+                <div id="output-viewer-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="panel.js?v=5"></script>
 </body>
 
 </html>

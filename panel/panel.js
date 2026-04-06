@@ -2,40 +2,41 @@ const API_BASE = "http://localhost:3000/api";
 
 // Límites basados en documentación pública de GitHub Models (plan Free/Pro)
 // https://docs.github.com/en/github-models/prototyping-with-ai-models#rate-limits
+// ctx = context window in tokens (input limit)
 const MODELS = [
     // OpenAI
-    { id: "openai/gpt-4.1", label: "GPT-4.1", provider: "OpenAI", cost: 2, rpm: 10, tpd: 40_000 },
-    { id: "openai/gpt-4.1-mini", label: "GPT-4.1 mini", provider: "OpenAI", cost: 1, rpm: 15, tpd: 120_000 },
-    { id: "openai/gpt-4.1-nano", label: "GPT-4.1 nano", provider: "OpenAI", cost: 1, rpm: 15, tpd: 120_000 },
-    { id: "openai/gpt-4o", label: "GPT-4o", provider: "OpenAI", cost: 2, rpm: 10, tpd: 40_000 },
-    { id: "openai/gpt-4o-mini", label: "GPT-4o mini", provider: "OpenAI", cost: 1, rpm: 15, tpd: 120_000 },
-    { id: "openai/o3-mini", label: "o3-mini", provider: "OpenAI", cost: 3, rpm: 2, tpd: 12_000 },
-    { id: "openai/o4-mini", label: "o4-mini", provider: "OpenAI", cost: 3, rpm: 2, tpd: 12_000 },
+    { id: "openai/gpt-4.1", label: "GPT-4.1", provider: "OpenAI", cost: 2, rpm: 10, tpd: 40_000, ctx: 1_047_576 },
+    { id: "openai/gpt-4.1-mini", label: "GPT-4.1 mini", provider: "OpenAI", cost: 1, rpm: 15, tpd: 120_000, ctx: 1_047_576 },
+    { id: "openai/gpt-4.1-nano", label: "GPT-4.1 nano", provider: "OpenAI", cost: 1, rpm: 15, tpd: 120_000, ctx: 1_047_576 },
+    { id: "openai/gpt-4o", label: "GPT-4o", provider: "OpenAI", cost: 2, rpm: 10, tpd: 40_000, ctx: 128_000 },
+    { id: "openai/gpt-4o-mini", label: "GPT-4o mini", provider: "OpenAI", cost: 1, rpm: 15, tpd: 120_000, ctx: 128_000 },
+    { id: "openai/o3-mini", label: "o3-mini", provider: "OpenAI", cost: 3, rpm: 2, tpd: 12_000, ctx: 200_000 },
+    { id: "openai/o4-mini", label: "o4-mini", provider: "OpenAI", cost: 3, rpm: 2, tpd: 12_000, ctx: 200_000 },
     // Meta
-    { id: "meta/llama-4-maverick-17b-128e-instruct-fp8", label: "Llama 4 Maverick", provider: "Meta", cost: 2, rpm: 10, tpd: 40_000 },
-    { id: "meta/llama-4-scout-17b-16e-instruct", label: "Llama 4 Scout", provider: "Meta", cost: 1, rpm: 15, tpd: 120_000 },
-    { id: "meta/llama-3.3-70b-instruct", label: "Llama 3.3 70B", provider: "Meta", cost: 2, rpm: 10, tpd: 40_000 },
-    { id: "meta/meta-llama-3.1-405b-instruct", label: "Llama 3.1 405B", provider: "Meta", cost: 2, rpm: 10, tpd: 40_000 },
-    { id: "meta/meta-llama-3.1-8b-instruct", label: "Llama 3.1 8B", provider: "Meta", cost: 1, rpm: 15, tpd: 120_000 },
+    { id: "meta/llama-4-maverick-17b-128e-instruct-fp8", label: "Llama 4 Maverick", provider: "Meta", cost: 2, rpm: 10, tpd: 40_000, ctx: 1_048_576 },
+    { id: "meta/llama-4-scout-17b-16e-instruct", label: "Llama 4 Scout", provider: "Meta", cost: 1, rpm: 15, tpd: 120_000, ctx: 10_000_000 },
+    { id: "meta/llama-3.3-70b-instruct", label: "Llama 3.3 70B", provider: "Meta", cost: 2, rpm: 10, tpd: 40_000, ctx: 128_000 },
+    { id: "meta/meta-llama-3.1-405b-instruct", label: "Llama 3.1 405B", provider: "Meta", cost: 2, rpm: 10, tpd: 40_000, ctx: 128_000 },
+    { id: "meta/meta-llama-3.1-8b-instruct", label: "Llama 3.1 8B", provider: "Meta", cost: 1, rpm: 15, tpd: 120_000, ctx: 128_000 },
     // DeepSeek
-    { id: "deepseek/deepseek-r1", label: "DeepSeek R1", provider: "DeepSeek", cost: 3, rpm: 1, tpd: 8_000 },
-    { id: "deepseek/deepseek-r1-0528", label: "DeepSeek R1 (0528)", provider: "DeepSeek", cost: 3, rpm: 1, tpd: 8_000 },
-    { id: "deepseek/deepseek-v3-0324", label: "DeepSeek V3", provider: "DeepSeek", cost: 2, rpm: 10, tpd: 40_000 },
+    { id: "deepseek/deepseek-r1", label: "DeepSeek R1", provider: "DeepSeek", cost: 3, rpm: 1, tpd: 8_000, ctx: 32_000 },
+    { id: "deepseek/deepseek-r1-0528", label: "DeepSeek R1 (0528)", provider: "DeepSeek", cost: 3, rpm: 1, tpd: 8_000, ctx: 32_000 },
+    { id: "deepseek/deepseek-v3-0324", label: "DeepSeek V3", provider: "DeepSeek", cost: 2, rpm: 10, tpd: 40_000, ctx: 128_000 },
     // Mistral
-    { id: "mistral-ai/mistral-small-2503", label: "Mistral Small 3.1", provider: "Mistral", cost: 1, rpm: 15, tpd: 120_000 },
-    { id: "mistral-ai/mistral-medium-2505", label: "Mistral Medium 3", provider: "Mistral", cost: 1, rpm: 15, tpd: 120_000 },
-    { id: "mistral-ai/codestral-2501", label: "Codestral 25.01", provider: "Mistral", cost: 1, rpm: 15, tpd: 120_000 },
+    { id: "mistral-ai/mistral-small-2503", label: "Mistral Small 3.1", provider: "Mistral", cost: 1, rpm: 15, tpd: 120_000, ctx: 32_000 },
+    { id: "mistral-ai/mistral-medium-2505", label: "Mistral Medium 3", provider: "Mistral", cost: 1, rpm: 15, tpd: 120_000, ctx: 128_000 },
+    { id: "mistral-ai/codestral-2501", label: "Codestral 25.01", provider: "Mistral", cost: 1, rpm: 15, tpd: 120_000, ctx: 256_000 },
     // xAI
-    { id: "xai/grok-3", label: "Grok 3", provider: "xAI", cost: 3, rpm: 1, tpd: 15_000 },
-    { id: "xai/grok-3-mini", label: "Grok 3 Mini", provider: "xAI", cost: 2, rpm: 2, tpd: 30_000 },
+    { id: "xai/grok-3", label: "Grok 3", provider: "xAI", cost: 3, rpm: 1, tpd: 15_000, ctx: 131_072 },
+    { id: "xai/grok-3-mini", label: "Grok 3 Mini", provider: "xAI", cost: 2, rpm: 2, tpd: 30_000, ctx: 131_072 },
     // Microsoft
-    { id: "microsoft/phi-4", label: "Phi-4", provider: "Microsoft", cost: 1, rpm: 15, tpd: 120_000 },
-    { id: "microsoft/phi-4-mini-instruct", label: "Phi-4 mini", provider: "Microsoft", cost: 1, rpm: 15, tpd: 120_000 },
-    { id: "microsoft/phi-4-reasoning", label: "Phi-4 Reasoning", provider: "Microsoft", cost: 1, rpm: 15, tpd: 120_000 },
-    { id: "microsoft/mai-ds-r1", label: "MAI-DS-R1", provider: "Microsoft", cost: 3, rpm: 1, tpd: 8_000 },
+    { id: "microsoft/phi-4", label: "Phi-4", provider: "Microsoft", cost: 1, rpm: 15, tpd: 120_000, ctx: 16_384 },
+    { id: "microsoft/phi-4-mini-instruct", label: "Phi-4 mini", provider: "Microsoft", cost: 1, rpm: 15, tpd: 120_000, ctx: 16_384 },
+    { id: "microsoft/phi-4-reasoning", label: "Phi-4 Reasoning", provider: "Microsoft", cost: 1, rpm: 15, tpd: 120_000, ctx: 32_768 },
+    { id: "microsoft/mai-ds-r1", label: "MAI-DS-R1", provider: "Microsoft", cost: 3, rpm: 1, tpd: 8_000, ctx: 16_384 },
     // Cohere
-    { id: "cohere/cohere-command-a", label: "Command A", provider: "Cohere", cost: 1, rpm: 15, tpd: 120_000 },
-    { id: "cohere/cohere-command-r-plus-08-2024", label: "Command R+", provider: "Cohere", cost: 2, rpm: 10, tpd: 40_000 },
+    { id: "cohere/cohere-command-a", label: "Command A", provider: "Cohere", cost: 1, rpm: 15, tpd: 120_000, ctx: 256_000 },
+    { id: "cohere/cohere-command-r-plus-08-2024", label: "Command R+", provider: "Cohere", cost: 2, rpm: 10, tpd: 40_000, ctx: 128_000 },
 ];
 
 let activeChatModel = "openai/gpt-4o";
@@ -138,18 +139,16 @@ function renderWorkflow() {
 function switchView(view, btn) {
     document.querySelectorAll(".sidebar-nav-item").forEach(t => t.classList.remove("active"));
     document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
-    // btn puede ser el elemento o el selector
     const navBtn = btn instanceof Element ? btn : document.querySelector(`[data-view="${view}"]`);
     if (navBtn) navBtn.classList.add("active");
     const viewEl = document.getElementById(`view-${view}`);
     if (viewEl) viewEl.classList.add("active");
-    if (view === "modelos") {
-        renderLLMPanel();
-        if (!realQuotaData) fetchRealQuota();
-    }
-    if (view === "agregar") {
-        openManagePanel();
-    }
+    if (view === "modelos") { renderLLMPanel(); if (!realQuotaData) fetchRealQuota(); }
+    if (view === "agregar") openManagePanel();
+    if (view === "historial") loadHistorial();
+    if (view === "mcps") loadMcps();
+    if (view === "jira") loadJiraView();
+    if (view === "configuracion") loadConfig();
 }
 
 // ─── Gestionar Agentes ───────────────────────────────────────────────
@@ -553,13 +552,19 @@ function removeAttachment() {
 
 function renderAgents() {
     const grid = document.getElementById("agents-grid");
-    grid.innerHTML = AGENTS.map(agent => `
+    const DEFAULT_AGENTS = new Set(["doc-interpreter", "testcase-general", "testcase-gherkin", "playwright-agent"]);
+    grid.innerHTML = AGENTS.map(agent => {
+        const isDefault = DEFAULT_AGENTS.has(agent.id);
+        const extraActions = !isDefault ? `
+          <button class="btn-secondary" onclick="openEditAgentModal('${agent.id}')" title="Editar agente">✏️ Editar</button>
+          <button class="btn-secondary" style="color:var(--accent3)" onclick="deleteAgent('${agent.id}')" title="Eliminar agente">🗑️</button>` : "";
+        return `
     <div class="agent-card" id="card-${agent.id}">
       <div class="agent-header">
         <span class="agent-icon">${agent.icon}</span>
         <div>
           <div class="agent-name">${agent.name}</div>
-          <div class="agent-id">${agent.id}.agent.md</div>
+          <div class="agent-id">${agent.id}.agent.md${isDefault ? " • integrado" : ""}</div>
         </div>
         <span class="agent-status">READY</span>
       </div>
@@ -572,15 +577,12 @@ function renderAgents() {
         </div>
       </div>
       <div class="agent-actions">
-        <button class="btn-invoke" onclick="openChat('${agent.id}')">
-          💬 Abrir Chat
-        </button>
-        <button class="btn-secondary" onclick="showPrompt('${agent.id}')">
-          👁 Ver Prompt
-        </button>
+        <button class="btn-invoke" onclick="openChat('${agent.id}')">💬 Abrir Chat</button>
+        <button class="btn-secondary" onclick="showPrompt('${agent.id}')">👁 Ver Prompt</button>
+        ${extraActions}
       </div>
-    </div>
-  `).join("");
+    </div>`;
+    }).join("");
 }
 
 // ─── Modal prompt ────────────────────────────────────────────────────────
@@ -598,36 +600,209 @@ function closeModal() {
 
 // ─── Chat modal ──────────────────────────────────────────────────────────
 
+const CHAT_STORAGE_PREFIX = "mc-chat-";
+const CHAT_STORAGE_MAX_BYTES = 4 * 1024 * 1024; // 4 MB límite de seguridad (localStorage ~5-10 MB)
+const CHAT_STORAGE_WARN_BYTES = 3 * 1024 * 1024; // advertencia al 75%
+
+function chatStorageKey(agentId) { return CHAT_STORAGE_PREFIX + agentId; }
+
+function saveChatToStorage(agentId, history, lastContent) {
+    try {
+        const payload = JSON.stringify({ history, lastContent, savedAt: Date.now() });
+        // Protección: no guardar si supera el límite individual
+        if (payload.length > CHAT_STORAGE_MAX_BYTES) {
+            console.warn("[mc] historial demasiado grande para guardar, se omite.");
+            return;
+        }
+        localStorage.setItem(chatStorageKey(agentId), payload);
+        checkLocalStorageUsage();
+    } catch (e) {
+        // QuotaExceededError
+        if (e.name === "QuotaExceededError" || e.code === 22) {
+            showLocalStorageFullWarning();
+        }
+    }
+}
+
+function loadChatFromStorage(agentId) {
+    try {
+        const raw = localStorage.getItem(chatStorageKey(agentId));
+        if (!raw) return null;
+        return JSON.parse(raw);
+    } catch { return null; }
+}
+
+function checkLocalStorageUsage() {
+    try {
+        let total = 0;
+        for (const key of Object.keys(localStorage)) {
+            total += (localStorage.getItem(key) || "").length * 2; // UTF-16: 2 bytes/char
+        }
+        const warnEl = document.getElementById("localstorage-warn");
+        if (!warnEl) return;
+        const totalMB = (total / 1024 / 1024).toFixed(1);
+        if (total >= CHAT_STORAGE_WARN_BYTES) {
+            warnEl.style.display = "flex";
+            warnEl.innerHTML = `<span class="ls-warn-badge" onclick="promptClearStorage()" title="Click para liberar espacio">⚠️ ${totalMB} MB usados — Click para limpiar</span>`;
+        } else {
+            warnEl.style.display = "none";
+        }
+    } catch { }
+}
+
+function showLocalStorageFullWarning() {
+    showToast("⚠️ El almacenamiento local está lleno. Limpiá el historial desde el chat.");
+    const warnEl = document.getElementById("localstorage-warn");
+    if (warnEl) {
+        warnEl.style.display = "flex";
+        warnEl.innerHTML = `<span class="ls-warn-badge ls-warn-danger" onclick="promptClearStorage()">🔴 Almacenamiento lleno — Click para liberar</span>`;
+    }
+}
+
+function promptClearStorage() {
+    const keys = Object.keys(localStorage).filter(k => k.startsWith(CHAT_STORAGE_PREFIX));
+    const agentCount = keys.length;
+    if (agentCount === 0) { showToast("ℹ️ No hay historial guardado."); return; }
+
+    // Calcular tamaño total ocupado por chats
+    let totalBytes = 0;
+    keys.forEach(k => totalBytes += (localStorage.getItem(k) || "").length * 2);
+    const totalMB = (totalBytes / 1024 / 1024).toFixed(2);
+
+    const confirmed = confirm(
+        `⚠️ LIMPIAR HISTORIAL DE CHATS\n\n` +
+        `Se borrarán las conversaciones guardadas de ${agentCount} agente(s), ` +
+        `liberando ~${totalMB} MB de espacio.\n\n` +
+        `Esta acción NO se puede deshacer. Los outputs ya guardados en /outputs/ no se ven afectados.\n\n` +
+        `¿Confirmar limpieza?`
+    );
+    if (!confirmed) return;
+
+    keys.forEach(k => localStorage.removeItem(k));
+
+    // Si hay un chat abierto del agente actual, reflejar en pantalla
+    if (activeChatAgentId) {
+        chatHistory = [];
+        lastAssistantContent = "";
+        const agent = AGENTS.find(a => a.id === activeChatAgentId);
+        if (agent) {
+            document.getElementById("chat-messages").innerHTML = `
+              <div class="chat-msg assistant">
+                <div class="msg-bubble"><p>Historial limpiado. Nueva conversación con <strong>${agent.name}</strong>.</p></div>
+              </div>`;
+        }
+        document.getElementById("btn-save-md").style.display = "none";
+    }
+
+    const warnEl = document.getElementById("localstorage-warn");
+    if (warnEl) warnEl.style.display = "none";
+    showToast(`✅ Historial de ${agentCount} agente(s) eliminado (${totalMB} MB liberados)`);
+}
+
+function renderChatHistory(history, agentName, agentHint) {
+    const container = document.getElementById("chat-messages");
+    container.innerHTML = "";
+
+    // Mensaje de bienvenida
+    const welcome = document.createElement("div");
+    welcome.className = "chat-msg assistant";
+    welcome.innerHTML = `<div class="msg-bubble"><p>Hola! Soy el agente <strong>${agentName}</strong>. ${agentHint} También podés adjuntar un archivo <strong>.doc o .docx</strong> directamente.</p></div>`;
+    container.appendChild(welcome);
+
+    // Restaurar mensajes
+    for (const msg of history) {
+        const div = document.createElement("div");
+        if (msg.role === "user") {
+            div.className = "chat-msg user";
+            div.innerHTML = `<div class="msg-bubble"><p>${escapeHtml(msg.display || msg.content)}</p></div>`;
+        } else {
+            div.className = "chat-msg assistant";
+            div.innerHTML = `<div class="msg-bubble">${renderMarkdown(msg.content)}</div>`;
+            // Botón copiar para cada respuesta restaurada
+            const btn = document.createElement("button");
+            btn.className = "btn-copy-response";
+            btn.innerHTML = "📋 Copiar";
+            btn.onclick = ((c) => () => {
+                navigator.clipboard.writeText(c)
+                    .then(() => { btn.textContent = "✅ Copiado"; setTimeout(() => { btn.innerHTML = "📋 Copiar"; }, 2000); })
+                    .catch(() => showToast("❌ No se pudo copiar"));
+            })(msg.content);
+            div.appendChild(btn);
+        }
+        container.appendChild(div);
+    }
+    container.scrollTop = container.scrollHeight;
+}
+
 function openChat(agentId) {
     const agent = AGENTS.find(a => a.id === agentId);
     activeChatAgentId = agentId;
-    chatHistory = [];
-    lastAssistantContent = "";
     removeAttachment();
 
     document.getElementById("chat-modal-title").textContent = `${agent.icon} ${agent.name} — Chat`;
     document.getElementById("chat-hint").textContent = agent.hint;
-    document.getElementById("chat-messages").innerHTML = `
-      <div class="chat-msg assistant">
-        <div class="msg-bubble"><p>Hola! Soy el agente <strong>${agent.name}</strong>. ${agent.hint} También podés adjuntar un archivo <strong>.doc o .docx</strong> directamente.</p></div>
-      </div>`;
     document.getElementById("chat-input").value = "";
-    document.getElementById("btn-save-md").style.display = "none";
+
+    // Restaurar historial desde localStorage
+    const saved = loadChatFromStorage(agentId);
+    if (saved && Array.isArray(saved.history) && saved.history.length > 0) {
+        chatHistory = saved.history;
+        lastAssistantContent = saved.lastContent || "";
+        renderChatHistory(chatHistory, agent.name, agent.hint);
+        document.getElementById("btn-save-md").style.display = lastAssistantContent ? "inline-flex" : "none";
+    } else {
+        chatHistory = [];
+        lastAssistantContent = "";
+        document.getElementById("chat-messages").innerHTML = `
+          <div class="chat-msg assistant">
+            <div class="msg-bubble"><p>Hola! Soy el agente <strong>${agent.name}</strong>. ${agent.hint} También podés adjuntar un archivo <strong>.doc o .docx</strong> directamente.</p></div>
+          </div>`;
+        document.getElementById("btn-save-md").style.display = "none";
+    }
 
     // Poblar selector de modelo
     const modelSel = document.getElementById("chat-model-select");
     modelSel.innerHTML = buildModelOptions(activeChatModel);
 
     document.getElementById("chat-modal").style.display = "flex";
+    checkLocalStorageUsage();
+    updateCompatIndicator();
     setTimeout(() => document.getElementById("chat-input").focus(), 100);
 }
 
 function closeChatModal() {
+    // Guardar historial antes de cerrar
+    if (activeChatAgentId && chatHistory.length > 0) {
+        saveChatToStorage(activeChatAgentId, chatHistory, lastAssistantContent);
+    }
     document.getElementById("chat-modal").style.display = "none";
     activeChatAgentId = null;
     chatHistory = [];
     lastAssistantContent = "";
     removeAttachment();
+}
+
+function newConversation() {
+    if (chatHistory.length === 0) return; // ya está vacío
+    const confirmed = confirm(
+        "¿Empezar una nueva conversación?\n\nEl historial actual se borrará permanentemente.\nLos archivos guardados en /outputs/ no se ven afectados."
+    );
+    if (!confirmed) return;
+
+    if (activeChatAgentId) {
+        localStorage.removeItem(chatStorageKey(activeChatAgentId));
+    }
+    chatHistory = [];
+    lastAssistantContent = "";
+
+    const agent = AGENTS.find(a => a.id === activeChatAgentId);
+    document.getElementById("chat-messages").innerHTML = `
+      <div class="chat-msg assistant">
+        <div class="msg-bubble"><p>Nueva conversación iniciada. Soy <strong>${agent ? agent.name : "el agente"}</strong>. ${agent ? agent.hint : ""}</p></div>
+      </div>`;
+    document.getElementById("btn-save-md").style.display = "none";
+    checkLocalStorageUsage();
+    showToast("🗑️ Conversación reiniciada");
 }
 
 function appendUserMessage(text) {
@@ -678,7 +853,7 @@ async function sendMessage() {
     appendUserMessage(displayText);
     removeAttachment();
 
-    chatHistory.push({ role: "user", content: messageContent });
+    chatHistory.push({ role: "user", content: messageContent, display: displayText });
 
     const bubble = createAssistantBubble();
     let accumulated = "";
@@ -721,10 +896,13 @@ async function sendMessage() {
                         bubble.innerHTML = renderMarkdown(data.fullContent);
                         chatHistory.push({ role: "assistant", content: data.fullContent });
                         document.getElementById("btn-save-md").style.display = "inline-flex";
+                        appendCopyButton(bubble, data.fullContent);
                         if (data.usage) {
                             appendTokenBadge(bubble, data.usage, data.model || activeChatModel);
                             addUsageRecord(activeChatAgentId, data.model || activeChatModel, data.usage);
                         }
+                        // Guardar en localStorage después de cada respuesta completa
+                        saveChatToStorage(activeChatAgentId, chatHistory, data.fullContent);
                     }
                 } catch (_) { }
             }
@@ -905,6 +1083,18 @@ function appendTokenBadge(bubble, usage, model) {
     bubble.parentElement.appendChild(badge);
 }
 
+function appendCopyButton(bubble, content) {
+    const btn = document.createElement("button");
+    btn.className = "btn-copy-response";
+    btn.innerHTML = "📋 Copiar";
+    btn.onclick = () => {
+        navigator.clipboard.writeText(content)
+            .then(() => { btn.textContent = "✅ Copiado"; setTimeout(() => { btn.innerHTML = "📋 Copiar"; }, 2000); })
+            .catch(() => showToast("❌ No se pudo copiar"));
+    };
+    bubble.parentElement.appendChild(btn);
+}
+
 function setGlobalModel(modelId) {
     activeChatModel = modelId;
     realQuotaData = null; // invalidar cuota al cambiar modelo
@@ -920,6 +1110,48 @@ function setActiveChatModel(modelId) {
     activeChatModel = modelId;
     const globalSel = document.getElementById("global-model-select");
     if (globalSel) globalSel.value = modelId;
+    updateCompatIndicator();
+}
+
+// ─── Indicador de compatibilidad de contexto ─────────────────────────────────
+
+function estimateTokens(chars) {
+    // Estimación: ~4 caracteres = 1 token (heurística estándar)
+    return Math.ceil(chars / 4);
+}
+
+function updateCompatIndicator() {
+    const el = document.getElementById("model-compat-indicator");
+    if (!el) return;
+
+    const model = MODELS.find(m => m.id === activeChatModel);
+    if (!model) { el.style.display = "none"; return; }
+
+    // Calcular tokens estimados del texto actual en el chat
+    const inputText = document.getElementById("chat-input")?.value || "";
+    const historyText = Array.isArray(chatHistory) ? chatHistory.map(m => m.content || "").join(" ") : "";
+    const attachedText = attachedFileText || "";
+    const totalChars = inputText.length + historyText.length + attachedText.length;
+    const estimatedTokens = estimateTokens(totalChars);
+
+    // Reservar ~2k tokens para la respuesta del modelo
+    const usableCtx = Math.max(0, (model.ctx || 128_000) - 2_000);
+    const pct = estimatedTokens / usableCtx;
+
+    let icon, color, label;
+    if (pct < 0.5) {
+        icon = "🟢"; color = "var(--accent2)";
+        label = `OK — ~${estimatedTokens.toLocaleString()} / ${(usableCtx).toLocaleString()} tokens`;
+    } else if (pct < 0.85) {
+        icon = "🟡"; color = "var(--warn)";
+        label = `Moderado — ~${estimatedTokens.toLocaleString()} / ${(usableCtx).toLocaleString()} tokens`;
+    } else {
+        icon = "🔴"; color = "var(--accent3)";
+        label = `⚠️ Texto muy largo para este modelo (~${estimatedTokens.toLocaleString()} / ${(usableCtx).toLocaleString()} tokens)`;
+    }
+
+    el.style.display = "flex";
+    el.innerHTML = `<span style="font-size:13px">${icon}</span><span style="color:${color};font-family:var(--mono);font-size:10px;white-space:nowrap">${label}</span>`;
 }
 
 // ─── Guardar .md ─────────────────────────────────────────────────────────
@@ -955,7 +1187,9 @@ async function loadOutputsCount() {
     try {
         const res = await fetch(`${API_BASE}/outputs`);
         const data = await res.json();
-        document.getElementById("outputs-count").textContent = data.files.length;
+        const count = (data.files || []).length;
+        const badge = document.getElementById("nav-badge-outputs");
+        if (badge) badge.textContent = count > 0 ? count : "";
     } catch (_) { }
 }
 
@@ -1125,11 +1359,14 @@ document.addEventListener("DOMContentLoaded", () => {
     loadAgents();
     loadOutputsCount();
     checkServerStatus();
-    // Inicializar selector global de modelo y barras de límites
+    loadConfig(); // init badge
     document.getElementById("global-model-select").innerHTML = buildModelOptions(activeChatModel);
     renderLLMPanel();
     document.getElementById("inspector-url").addEventListener("keydown", (e) => {
         if (e.key === "Enter") runInspector();
+    });
+    document.getElementById("chat-input").addEventListener("input", () => {
+        updateCompatIndicator();
     });
     document.getElementById("modal").addEventListener("click", function (e) {
         if (e.target === this) closeModal();
@@ -1137,4 +1374,671 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("chat-modal").addEventListener("click", function (e) {
         if (e.target === this) closeChatModal();
     });
+    document.getElementById("agent-editor-modal").addEventListener("click", function (e) {
+        if (e.target === this) closeAgentEditorModal();
+    });
+    document.getElementById("github-import-modal").addEventListener("click", function (e) {
+        if (e.target === this) closeGithubImportModal();
+    });
+    document.getElementById("mcp-add-modal").addEventListener("click", function (e) {
+        if (e.target === this) closeMcpAddModal();
+    });
+    document.getElementById("output-viewer-modal").addEventListener("click", function (e) {
+        if (e.target === this) closeOutputViewer();
+    });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HISTORIAL DE OUTPUTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+let _currentOutputFile = null;
+let _currentOutputContent = null;
+
+async function loadHistorial() {
+    const body = document.getElementById("historial-body");
+    body.innerHTML = `<p class="llm-empty">Cargando...</p>`;
+    try {
+        const res = await fetch(`${API_BASE}/outputs`);
+        const data = await res.json();
+        const files = data.files || [];
+        const badge = document.getElementById("nav-badge-outputs");
+        if (badge) badge.textContent = files.length > 0 ? files.length : "";
+        if (files.length === 0) {
+            body.innerHTML = `<p class="llm-empty">No hay outputs guardados aún. Generá un resultado con algún agente y guardalo como .md.</p>`;
+            return;
+        }
+        body.innerHTML = `
+            <div class="historial-grid">
+                ${files.map(f => {
+            const agentId = f.name.split("-")[0] || "output";
+            const icon = agentIconFromId(agentId);
+            const date = formatIsoDate(f.modified);
+            const sizeKb = (f.size / 1024).toFixed(1);
+            return `
+                    <div class="historial-card" onclick="openOutputViewer('${escapeHtml(f.name)}')">
+                        <div class="historial-card-icon">${icon}</div>
+                        <div class="historial-card-info">
+                            <div class="historial-card-name">${escapeHtml(f.name)}</div>
+                            <div class="historial-card-meta">${date} · ${sizeKb} KB</div>
+                        </div>
+                        <div class="historial-card-actions" onclick="event.stopPropagation()">
+                            <button class="btn-inspector-action" onclick="openOutputViewer('${escapeHtml(f.name)}')">👁 Ver</button>
+                            <button class="btn-inspector-action" style="color:var(--accent3)" onclick="confirmDeleteOutput('${escapeHtml(f.name)}')">🗑️</button>
+                        </div>
+                    </div>`;
+        }).join("")}
+            </div>`;
+    } catch {
+        body.innerHTML = `<p class="llm-empty" style="color:var(--accent3)">❌ Error cargando historial.</p>`;
+    }
+}
+
+function agentIconFromId(id) {
+    const icons = { "doc-interpreter": "📄", "testcase-general": "🧪", "testcase-gherkin": "🥒", "playwright-agent": "🎭", "inspector": "🔍" };
+    return icons[id] || "📁";
+}
+
+function formatIsoDate(iso) {
+    try {
+        return new Date(iso).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    } catch { return iso; }
+}
+
+async function openOutputViewer(filename) {
+    _currentOutputFile = filename;
+    document.getElementById("output-viewer-title").textContent = filename;
+    document.getElementById("output-viewer-content").innerHTML = `<p class="llm-empty">Cargando...</p>`;
+    document.getElementById("output-viewer-modal").style.display = "flex";
+    try {
+        const res = await fetch(`${API_BASE}/outputs/${encodeURIComponent(filename)}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        _currentOutputContent = data.content;
+        document.getElementById("output-viewer-content").innerHTML = renderMarkdown(data.content);
+    } catch (err) {
+        document.getElementById("output-viewer-content").innerHTML = `<p style="color:var(--accent3)">❌ ${escapeHtml(err.message)}</p>`;
+    }
+}
+
+function closeOutputViewer() {
+    document.getElementById("output-viewer-modal").style.display = "none";
+    _currentOutputFile = null;
+    _currentOutputContent = null;
+}
+
+function copyOutputContent() {
+    if (!_currentOutputContent) return;
+    navigator.clipboard.writeText(_currentOutputContent)
+        .then(() => showToast("📋 Contenido copiado"))
+        .catch(() => showToast("❌ No se pudo copiar"));
+}
+
+async function deleteCurrentOutput() {
+    if (!_currentOutputFile) return;
+    if (!confirm(`¿Eliminar "${_currentOutputFile}"?`)) return;
+    await confirmDeleteOutput(_currentOutputFile);
+    closeOutputViewer();
+}
+
+async function confirmDeleteOutput(filename) {
+    try {
+        const res = await fetch(`${API_BASE}/outputs/${encodeURIComponent(filename)}`, { method: "DELETE" });
+        const data = await res.json();
+        if (res.ok) {
+            showToast(`🗑️ Eliminado: ${filename}`);
+            loadHistorial();
+            loadOutputsCount();
+        } else {
+            showToast(`❌ ${data.error}`);
+        }
+    } catch { showToast("❌ Error al eliminar"); }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONFIGURACIÓN / SETUP WIZARD
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function loadConfig() {
+    try {
+        const res = await fetch(`${API_BASE}/config`);
+        const data = await res.json();
+        const badge = document.getElementById("nav-badge-config");
+        if (badge) badge.style.display = !data.isConfigured ? "inline-flex" : "none";
+        const body = document.getElementById("config-body");
+        if (body) renderConfigView(data);
+    } catch { }
+}
+
+function renderConfigView(data) {
+    const config = data.config || {};
+    const field = (key, label, type, placeholder, hint) => {
+        const val = config[key] || "";
+        const isCfg = val.length > 0;
+        return `
+        <div class="config-field">
+            <label>${label}</label>
+            <div class="config-field-row">
+                <input type="${type}" id="cfg-${key}" value="${val}" placeholder="${placeholder}" autocomplete="off" />
+                <span class="config-status ${isCfg ? "is-configured" : "not-configured"}">${isCfg ? "✅" : "○"}</span>
+            </div>
+            ${hint ? `<span class="form-hint">${hint}</span>` : ""}
+        </div>`;
+    };
+    document.getElementById("config-body").innerHTML = `
+        <div class="config-section">
+            <div class="config-section-title">🤖 GitHub Copilot <span class="config-required-badge">Principal</span></div>
+            <p class="config-hint">
+                Token de GitHub para invocar los modelos LLM (GPT-4.1, Claude, Llama, Phi, etc.) vía
+                <strong>GitHub Models API</strong>. También habilita la importación de agentes desde repositorios privados.<br><br>
+                Generalo en <a href="https://github.com/settings/tokens" target="_blank" rel="noopener">github.com/settings/tokens</a>
+                — scope mínimo requerido: <code>read:user</code>. Si usás GitHub Models necesitás acceso al programa de GitHub Models beta.
+            </p>
+            ${field("GITHUB_TOKEN", "GITHUB_TOKEN", "password", "ghp_... o github_pat_...", "Se guarda en el archivo .env local. Nunca se envía a terceros.")}
+        </div>
+        <div class="config-actions">
+            <button class="btn-modal-save" onclick="saveConfig()">💾 Guardar configuración</button>
+        </div>`;
+}
+
+async function saveConfig() {
+    const keys = ["GITHUB_TOKEN"];
+    const config = {};
+    for (const key of keys) {
+        const el = document.getElementById(`cfg-${key}`);
+        if (el) config[key] = el.value.trim();
+    }
+    try {
+        const res = await fetch(`${API_BASE}/config`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ config }),
+        });
+        const data = await res.json();
+        if (res.ok) { showToast("✅ Configuración guardada"); await loadConfig(); }
+        else showToast(`❌ ${data.error}`);
+    } catch { showToast("❌ No se pudo conectar con el servidor"); }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MCPs
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function loadMcps() {
+    const body = document.getElementById("mcps-body");
+    body.innerHTML = `<p class="llm-empty">Cargando...</p>`;
+    try {
+        const res = await fetch(`${API_BASE}/mcp`);
+        const data = await res.json();
+        const servers = data.servers || {};
+        const names = Object.keys(servers);
+        if (names.length === 0) {
+            body.innerHTML = `<p class="llm-empty">No hay servidores MCP configurados. Hacé click en ➕ Agregar servidor para empezar.</p>`;
+            return;
+        }
+        body.innerHTML = `<div class="mcp-list">
+            ${names.map(name => {
+            const s = servers[name];
+            const envKeys = Object.keys(s.env || {});
+            return `
+                <div class="mcp-card">
+                    <div class="mcp-card-header">
+                        <div class="mcp-card-name">🔌 ${escapeHtml(name)}</div>
+                        <button class="btn-inspector-action" style="color:var(--accent3)" onclick="deleteMcpServer('${escapeHtml(name)}')">🗑️ Eliminar</button>
+                    </div>
+                    <div class="mcp-card-detail"><code>${escapeHtml(s.command)} ${(s.args || []).map(a => escapeHtml(a)).join(" ")}</code></div>
+                    ${envKeys.length > 0 ? `<div class="mcp-card-env">ENV: ${envKeys.map(k => `<span class="skill-tag">${escapeHtml(k)}</span>`).join(" ")}</div>` : ""}
+                </div>`;
+        }).join("")}
+        </div>`;
+    } catch {
+        body.innerHTML = `<p class="llm-empty" style="color:var(--accent3)">❌ Error cargando MCPs.</p>`;
+    }
+}
+
+function openAddMcpModal() {
+    document.getElementById("mcp-name").value = "";
+    document.getElementById("mcp-command").value = "";
+    document.getElementById("mcp-args").value = "";
+    document.getElementById("mcp-env").value = "";
+    document.getElementById("mcp-add-modal").style.display = "flex";
+}
+
+function closeMcpAddModal() {
+    document.getElementById("mcp-add-modal").style.display = "none";
+}
+
+async function saveMcpServer() {
+    const name = document.getElementById("mcp-name").value.trim();
+    const command = document.getElementById("mcp-command").value.trim();
+    const argsRaw = document.getElementById("mcp-args").value.trim();
+    const envRaw = document.getElementById("mcp-env").value.trim();
+    if (!name || !command) { showToast("❌ Nombre y comando son obligatorios"); return; }
+    const args = argsRaw ? argsRaw.split("\n").map(s => s.trim()).filter(Boolean) : [];
+    const env = {};
+    if (envRaw) {
+        for (const line of envRaw.split("\n")) {
+            const [k, ...rest] = line.split("=");
+            if (k && rest.length > 0) env[k.trim()] = rest.join("=").trim();
+        }
+    }
+    try {
+        const res = await fetch(`${API_BASE}/mcp`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, command, args, env }),
+        });
+        const data = await res.json();
+        if (res.ok) { showToast(`✅ Servidor MCP "${name}" guardado`); closeMcpAddModal(); loadMcps(); }
+        else showToast(`❌ ${data.error}`);
+    } catch { showToast("❌ Error al guardar MCP"); }
+}
+
+async function deleteMcpServer(name) {
+    if (!confirm(`¿Eliminar el servidor MCP "${name}"?`)) return;
+    try {
+        const res = await fetch(`${API_BASE}/mcp/${encodeURIComponent(name)}`, { method: "DELETE" });
+        const data = await res.json();
+        if (res.ok) { showToast(`✅ MCP "${name}" eliminado`); loadMcps(); }
+        else showToast(`❌ ${data.error}`);
+    } catch { showToast("❌ Error al eliminar MCP"); }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// JIRA
+// ─────────────────────────────────────────────────────────────────────────────
+
+let _jiraProjects = [];
+let _jiraCurrentJql = "assignee = currentUser() ORDER BY updated DESC";
+
+async function loadJiraView() {
+    const body = document.getElementById("jira-body");
+    body.innerHTML = `<p class="llm-empty">Verificando configuración...</p>`;
+
+    // Chequear si ya están configuradas las credenciales de Jira
+    let jiraConfigured = false;
+    try {
+        const res = await fetch(`${API_BASE}/config`);
+        const data = await res.json();
+        const cfg = data.config || {};
+        // Detectar configurado: el valor enmascarado es no-vacío
+        jiraConfigured = !!(cfg.JIRA_BASE_URL && cfg.JIRA_EMAIL && cfg.JIRA_TOKEN);
+        // Solo pre-llenar URL (no es secreto); email y token se dejan en blanco por seguridad
+        _jiraFormCache = {
+            url: cfg.JIRA_BASE_URL && !cfg.JIRA_BASE_URL.startsWith("***") ? cfg.JIRA_BASE_URL : "",
+            email: "",
+            token: ""
+        };
+    } catch { }
+
+    // Panel de conexión (siempre visible y colapsable)
+    const connPanel = `
+        <div class="jira-conn-panel ${jiraConfigured ? "jira-conn-collapsed" : ""}" id="jira-conn-panel">
+            <div class="jira-conn-header" onclick="toggleJiraConnPanel()">
+                <span>${jiraConfigured ? "✅ Conectado a Jira" : "🔗 Configurar conexión con Jira"}</span>
+                <span class="jira-conn-chevron" id="jira-conn-chevron">${jiraConfigured ? "▸" : "▾"}</span>
+            </div>
+            <div class="jira-conn-body" id="jira-conn-body" style="display:${jiraConfigured ? "none" : "block"}">
+                <p class="config-hint" style="margin-bottom:14px">
+                    Ingresá las credenciales de tu instancia de Jira. El token de API se genera en
+                    <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" rel="noopener">atlassian.com → API Tokens</a>.
+                </p>
+                <div class="jira-conn-fields">
+                    <div class="config-field">
+                        <label>URL de la instancia</label>
+                        <input type="url" id="jira-cfg-url" value="${escapeHtml(_jiraFormCache.url)}" placeholder="https://tu-empresa.atlassian.net" autocomplete="off" />
+                    </div>
+                    <div class="config-field">
+                        <label>Email de usuario</label>
+                        <input type="email" id="jira-cfg-email" value="${escapeHtml(_jiraFormCache.email)}" placeholder="tu@empresa.com" autocomplete="off" />
+                    </div>
+                    <div class="config-field">
+                        <label>API Token</label>
+                        <input type="password" id="jira-cfg-token" value="${escapeHtml(_jiraFormCache.token)}" placeholder="Token generado en Atlassian" autocomplete="off" />
+                    </div>
+                </div>
+                <div style="display:flex;gap:10px;margin-top:12px">
+                    <button class="btn-modal-save" onclick="saveJiraConnection()">💾 Guardar y conectar</button>
+                    ${jiraConfigured ? `<button class="btn-modal-cancel" onclick="clearJiraConnection()">🗑️ Desconectar</button>` : ""}
+                </div>
+                <div id="jira-conn-status" style="margin-top:10px"></div>
+            </div>
+        </div>`;
+
+    // Panel de tareas (solo si está configurado)
+    const tasksPanel = jiraConfigured ? `
+        <div class="jira-toolbar">
+            <input type="text" id="jira-jql" value="${escapeHtml(_jiraCurrentJql)}" placeholder="JQL: project = MYP ORDER BY updated DESC" class="jira-jql-input" />
+            <button class="btn-inspect" onclick="loadJiraIssues()">🔍 Buscar issues</button>
+            <button class="btn-view-action secondary" onclick="openCreateBugModal()">🐛 Reportar Bug</button>
+        </div>
+        <div id="jira-issues-body">
+            <p class="llm-empty">Buscá issues con JQL para delegarlos a un agente.</p>
+        </div>` : `
+        <div id="jira-issues-body">
+            <div class="jira-not-configured">
+                <p>Configurá la conexión arriba para empezar a trabajar con issues de Jira.</p>
+                <p class="form-hint">Una vez conectado, podrás buscar issues y delegarlos a cualquier agente activo para que genere casos de prueba, analice bugs, o cualquier otra tarea.</p>
+            </div>
+        </div>`;
+
+    body.innerHTML = connPanel + tasksPanel;
+}
+
+let _jiraFormCache = { url: "", email: "", token: "" };
+
+function toggleJiraConnPanel() {
+    const body = document.getElementById("jira-conn-body");
+    const chevron = document.getElementById("jira-conn-chevron");
+    if (!body) return;
+    const isOpen = body.style.display !== "none";
+    body.style.display = isOpen ? "none" : "block";
+    if (chevron) chevron.textContent = isOpen ? "▸" : "▾";
+}
+
+async function saveJiraConnection() {
+    const url = (document.getElementById("jira-cfg-url")?.value || "").trim();
+    const email = (document.getElementById("jira-cfg-email")?.value || "").trim();
+    const token = (document.getElementById("jira-cfg-token")?.value || "").trim();
+    const statusEl = document.getElementById("jira-conn-status");
+
+    if (!url || !email || !token) {
+        if (statusEl) statusEl.innerHTML = `<div class="jira-status-error">❌ Completá todos los campos.</div>`;
+        return;
+    }
+
+    if (statusEl) statusEl.innerHTML = `<p class="llm-empty">Guardando y verificando conexión...</p>`;
+
+    // Guardar en .env via /api/config
+    try {
+        const res = await fetch(`${API_BASE}/config`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ config: { JIRA_BASE_URL: url, JIRA_EMAIL: email, JIRA_TOKEN: token } }),
+        });
+        if (!res.ok) {
+            if (statusEl) statusEl.innerHTML = `<div class="jira-status-error">❌ No se pudo guardar la configuración.</div>`;
+            return;
+        }
+    } catch {
+        if (statusEl) statusEl.innerHTML = `<div class="jira-status-error">❌ Error conectando con el servidor.</div>`;
+        return;
+    }
+
+    // Probar conexión
+    try {
+        const res = await fetch(`${API_BASE}/jira/test`);
+        const data = await res.json();
+        if (res.ok) {
+            if (statusEl) statusEl.innerHTML = `<div class="jira-status-ok">✅ Conectado como <strong>${escapeHtml(data.displayName)}</strong> (${escapeHtml(data.email)})</div>`;
+            showToast(`✅ Jira conectado: ${data.displayName}`);
+            // Recargar vista para mostrar el panel de tareas
+            setTimeout(() => loadJiraView(), 1200);
+        } else {
+            if (statusEl) statusEl.innerHTML = `<div class="jira-status-error">❌ ${escapeHtml(data.error)}</div>`;
+        }
+    } catch {
+        if (statusEl) statusEl.innerHTML = `<div class="jira-status-error">❌ Credenciales guardadas pero no se pudo conectar. Verificá los datos.</div>`;
+    }
+}
+
+async function clearJiraConnection() {
+    if (!confirm("¿Desconectar Jira?\n\nSe borrarán las credenciales del archivo .env local.")) return;
+    try {
+        await fetch(`${API_BASE}/config`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ config: { JIRA_BASE_URL: "", JIRA_EMAIL: "", JIRA_TOKEN: "" } }),
+        });
+        showToast("🔌 Jira desconectado");
+        loadJiraView();
+    } catch { showToast("❌ Error al desconectar"); }
+}
+
+async function testJiraConnection() {
+    const statusEl = document.getElementById("jira-connection-status");
+    if (statusEl) statusEl.innerHTML = `<p class="llm-empty">Probando conexión...</p>`;
+    try {
+        const res = await fetch(`${API_BASE}/jira/test`);
+        const data = await res.json();
+        if (res.ok) {
+            if (statusEl) statusEl.innerHTML = `<div class="jira-status-ok">✅ Conectado como <strong>${escapeHtml(data.displayName)}</strong> (${escapeHtml(data.email)})</div>`;
+            showToast(`✅ Jira conectado: ${data.displayName}`);
+            loadJiraProjects();
+        } else {
+            if (statusEl) statusEl.innerHTML = `<div class="jira-status-error">❌ ${escapeHtml(data.error)}</div>`;
+            showToast(`❌ ${data.error}`);
+        }
+    } catch {
+        if (statusEl) statusEl.innerHTML = `<div class="jira-status-error">❌ No se pudo conectar con el servidor.</div>`;
+    }
+}
+
+async function loadJiraProjects() {
+    try {
+        const res = await fetch(`${API_BASE}/jira/projects`);
+        const data = await res.json();
+        if (res.ok) _jiraProjects = data.projects || [];
+    } catch { }
+}
+
+async function loadJiraIssues() {
+    const jqlEl = document.getElementById("jira-jql");
+    const jql = jqlEl ? jqlEl.value.trim() : _jiraCurrentJql;
+    _jiraCurrentJql = jql;
+    const issuesBody = document.getElementById("jira-issues-body");
+    if (!issuesBody) return;
+    issuesBody.innerHTML = `<p class="llm-empty">Buscando issues...</p>`;
+    try {
+        const res = await fetch(`${API_BASE}/jira/issues?jql=${encodeURIComponent(jql)}&maxResults=20`);
+        const data = await res.json();
+        if (!res.ok) { issuesBody.innerHTML = `<p class="llm-empty" style="color:var(--accent3)">❌ ${escapeHtml(data.error)}</p>`; return; }
+        const issues = data.issues || [];
+        if (issues.length === 0) { issuesBody.innerHTML = `<p class="llm-empty">No se encontraron issues con ese JQL.</p>`; return; }
+        issuesBody.innerHTML = `
+            <div class="jira-total">Total: ${data.total} issues</div>
+            <div class="jira-table-wrap">
+                <table class="jira-table">
+                    <thead><tr><th>Clave</th><th>Tipo</th><th>Resumen</th><th>Estado</th><th>Prioridad</th><th>Acciones</th></tr></thead>
+                    <tbody>
+                        ${issues.map(i => `
+                        <tr>
+                            <td><span class="jira-key">${escapeHtml(i.key)}</span></td>
+                            <td><span class="jira-type">${escapeHtml(i.type || "")}</span></td>
+                            <td class="jira-summary">${escapeHtml(i.summary)}</td>
+                            <td><span class="jira-status">${escapeHtml(i.status || "")}</span></td>
+                            <td>${escapeHtml(i.priority || "")}</td>
+                            <td class="jira-actions">
+                                <button class="btn-inspector-action" onclick="jiraIssueToAgent('${escapeHtml(i.key)}', \`${escapeHtml(i.summary)}\`, \`${escapeHtml(i.description)}\`)">🧪 Test Cases</button>
+                                <button class="btn-inspector-action" onclick="openAddCommentModal('${escapeHtml(i.key)}')">💬 Comentar</button>
+                            </td>
+                        </tr>`).join("")}
+                    </tbody>
+                </table>
+            </div>`;
+    } catch { issuesBody.innerHTML = `<p class="llm-empty" style="color:var(--accent3)">❌ Error al cargar issues.</p>`; }
+}
+
+function jiraIssueToAgent(key, summary, description) {
+    const agent = AGENTS.find(a => a.id === "testcase-general") || AGENTS[0];
+    if (!agent) { showToast("❌ No hay agentes activos"); return; }
+    openChat(agent.id);
+    setTimeout(() => {
+        const input = document.getElementById("chat-input");
+        input.value = `Issue Jira: ${key}\nResumen: ${summary}\nDescripción: ${description || "(sin descripción)"}\n\nGenerá casos de prueba para esta user story.`;
+        input.focus();
+    }, 150);
+}
+
+function openAddCommentModal(issueKey) {
+    const comment = prompt(`Escribí un comentario para ${issueKey}:`);
+    if (!comment) return;
+    addJiraComment(issueKey, comment);
+}
+
+async function addJiraComment(issueKey, comment) {
+    try {
+        const res = await fetch(`${API_BASE}/jira/comment`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ issueKey, comment }),
+        });
+        const data = await res.json();
+        if (res.ok) showToast(`✅ Comentario agregado a ${issueKey}`);
+        else showToast(`❌ ${data.error}`);
+    } catch { showToast("❌ Error al agregar comentario"); }
+}
+
+function openCreateBugModal() {
+    const projectKey = prompt("Clave del proyecto Jira (ej: MYP):");
+    if (!projectKey) return;
+    const summary = prompt("Resumen del bug:");
+    if (!summary) return;
+    const description = prompt("Descripción (opcional):", "") || "";
+    createJiraBug(projectKey, summary, description);
+}
+
+async function createJiraBug(projectKey, summary, description) {
+    try {
+        const res = await fetch(`${API_BASE}/jira/bug`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ projectKey, summary, description }),
+        });
+        const data = await res.json();
+        if (res.ok) showToast(`✅ Bug creado: ${data.key} — ${data.url}`);
+        else showToast(`❌ ${data.error}`);
+    } catch { showToast("❌ Error al crear bug en Jira"); }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EDITOR VISUAL DE AGENTES
+// ─────────────────────────────────────────────────────────────────────────────
+
+let _editingAgentId = null;
+
+function openCreateAgentModal() {
+    _editingAgentId = null;
+    document.getElementById("agent-editor-title").textContent = "Crear agente";
+    document.getElementById("ae-id").value = "";
+    document.getElementById("ae-id").disabled = false;
+    document.getElementById("ae-icon").value = "🤖";
+    document.getElementById("ae-name").value = "";
+    document.getElementById("ae-description").value = "";
+    document.getElementById("ae-flow").value = "";
+    document.getElementById("ae-hint").value = "Pegá el contenido del documento aquí.";
+    document.getElementById("ae-skills").value = "";
+    document.getElementById("ae-prompt").value = "";
+    document.getElementById("agent-editor-modal").style.display = "flex";
+}
+
+function openEditAgentModal(agentId) {
+    const agent = _allAgents.find(a => a.id === agentId);
+    if (!agent) return;
+    _editingAgentId = agentId;
+    document.getElementById("agent-editor-title").textContent = `Editar: ${agent.name}`;
+    document.getElementById("ae-id").value = agent.id;
+    document.getElementById("ae-id").disabled = true;
+    document.getElementById("ae-icon").value = agent.icon;
+    document.getElementById("ae-name").value = agent.name;
+    document.getElementById("ae-description").value = agent.description;
+    document.getElementById("ae-flow").value = agent.flow;
+    document.getElementById("ae-hint").value = agent.hint;
+    document.getElementById("ae-skills").value = (agent.skills || []).join("\n");
+    document.getElementById("ae-prompt").value = agent.prompt;
+    document.getElementById("agent-editor-modal").style.display = "flex";
+}
+
+function closeAgentEditorModal() {
+    document.getElementById("agent-editor-modal").style.display = "none";
+    _editingAgentId = null;
+}
+
+async function saveAgentFromEditor() {
+    const getId = id => document.getElementById(id).value.trim();
+    const id = getId("ae-id");
+    const name = getId("ae-name");
+    if (!id || !name) { showToast("❌ ID y Nombre son obligatorios"); return; }
+    const body = {
+        id, name,
+        description: getId("ae-description"),
+        icon: getId("ae-icon") || "🤖",
+        flow: getId("ae-flow"),
+        hint: getId("ae-hint") || "Pegá el contenido del documento aquí.",
+        prompt: document.getElementById("ae-prompt").value.trim(),
+        skills: document.getElementById("ae-skills").value.split("\n").map(s => s.trim()).filter(Boolean),
+    };
+    const isEdit = !!_editingAgentId;
+    const url = isEdit ? `${API_BASE}/agents/${_editingAgentId}` : `${API_BASE}/agents/create`;
+    const method = isEdit ? "PUT" : "POST";
+    try {
+        const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        const data = await res.json();
+        if (res.ok) {
+            showToast(`✅ Agente "${name}" ${isEdit ? "actualizado" : "creado"}`);
+            closeAgentEditorModal();
+            await loadAgents();
+        } else showToast(`❌ ${data.error}`);
+    } catch { showToast("❌ Error al guardar el agente"); }
+}
+
+async function deleteAgent(agentId) {
+    const agent = _allAgents.find(a => a.id === agentId);
+    if (!confirm(`¿Eliminar el agente "${agent ? agent.name : agentId}"? Esta acción no se puede deshacer.`)) return;
+    try {
+        const res = await fetch(`${API_BASE}/agents/${agentId}`, { method: "DELETE" });
+        const data = await res.json();
+        if (res.ok) { showToast(`✅ Agente "${agentId}" eliminado`); await loadAgents(); }
+        else showToast(`❌ ${data.error}`);
+    } catch { showToast("❌ Error al eliminar el agente"); }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// IMPORTAR DESDE GITHUB
+// ─────────────────────────────────────────────────────────────────────────────
+
+function openImportGithubModal() {
+    document.getElementById("github-import-url").value = "";
+    document.getElementById("github-import-token").value = "";
+    document.getElementById("github-import-status").innerHTML = "";
+    document.getElementById("btn-do-github-import").disabled = false;
+    document.getElementById("btn-do-github-import").textContent = "⬇️ Importar";
+    document.getElementById("github-import-modal").style.display = "flex";
+}
+
+function closeGithubImportModal() {
+    document.getElementById("github-import-modal").style.display = "none";
+}
+
+async function doGithubImport() {
+    const repoUrl = document.getElementById("github-import-url").value.trim();
+    const token = document.getElementById("github-import-token").value.trim();
+    const statusEl = document.getElementById("github-import-status");
+    const btn = document.getElementById("btn-do-github-import");
+    if (!repoUrl) { showToast("❌ Ingresá una URL"); return; }
+    btn.disabled = true;
+    btn.textContent = "⏳ Importando...";
+    statusEl.innerHTML = `<p class="llm-empty">Descargando archivos desde GitHub...</p>`;
+    try {
+        const res = await fetch(`${API_BASE}/agents/import-github`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ repoUrl, token: token || undefined }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+            statusEl.innerHTML = `<div class="jira-status-ok">✅ ${escapeHtml(data.message)}</div>`;
+            showToast(`✅ ${data.message}`);
+            await loadAgents();
+            setTimeout(closeGithubImportModal, 2000);
+        } else {
+            statusEl.innerHTML = `<div class="jira-status-error">❌ ${escapeHtml(data.error)}</div>`;
+            btn.disabled = false;
+            btn.textContent = "⬇️ Importar";
+        }
+    } catch {
+        statusEl.innerHTML = `<div class="jira-status-error">❌ No se pudo conectar con el servidor.</div>`;
+        btn.disabled = false;
+        btn.textContent = "⬇️ Importar";
+    }
+}

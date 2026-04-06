@@ -6,12 +6,13 @@ const path = require("path");
 const os = require("os");
 const OpenAI = require("openai").default;
 const mammoth = require("mammoth");
+const WordExtractor = require("word-extractor");
 const multer = require("multer");
 const { inspectUrl } = require("./playwright-inspector/inspector");
 
 const upload = multer({
     dest: os.tmpdir(),
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB max
+    limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB max
     fileFilter: (req, file, cb) => {
         const allowed = [
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -398,26 +399,49 @@ app.post("/api/chat", async (req, res) => {
         return res.status(400).json({ error: `Agente desconocido: ${agentId}` });
     }
 
-    const model = ALLOWED_MODELS.has(requestedModel) ? requestedModel : "gpt-4o";
+    const model = ALLOWED_MODELS.has(requestedModel) ? requestedModel : "openai/gpt-4o";
 
     // Límites de tokens por modelo (aprox. 4 chars = 1 token)
-    // Custom/restricted tier: max 4000 in → usamos 3000 con margen
     const RESTRICTED_MODELS = new Set([
         "deepseek/deepseek-r1", "deepseek/deepseek-r1-0528", "microsoft/mai-ds-r1",
         "xai/grok-3", "xai/grok-3-mini",
         "openai/o3-mini", "openai/o4-mini",
-        "DeepSeek-R1", "o3-mini" // legacy IDs
+        "DeepSeek-R1", "o3-mini"
     ]);
-    const tokenLimit = RESTRICTED_MODELS.has(model) ? 3000 : 7000;
+    // Modelos con contexto grande (128k+)
+    const LARGE_CONTEXT_MODELS = new Set([
+        "openai/gpt-4.1", "openai/gpt-4.1-mini", "openai/gpt-4.1-nano",
+        "openai/gpt-4o", "openai/gpt-4o-mini",
+        "meta/llama-4-maverick-17b-128e-instruct-fp8", "meta/llama-4-scout-17b-16e-instruct",
+        "meta/meta-llama-3.1-405b-instruct",
+        "gpt-4o", "gpt-4o-mini"
+    ]);
+
+    let tokenLimit;
+    if (RESTRICTED_MODELS.has(model)) {
+        tokenLimit = 3000;
+    } else if (LARGE_CONTEXT_MODELS.has(model)) {
+        tokenLimit = 60000; // ~240k chars, conservador para 128k ctx
+    } else {
+        tokenLimit = 15000; // default para modelos estándar
+    }
     const MAX_HISTORY_CHARS = tokenLimit * 4;
 
-    // Recortar historial desde el inicio hasta entrar en el límite
-    let trimmedMessages = [...messages];
+    // Recortar cada mensaje individual al límite para evitar que un documento gigante rompa la request
+    const MAX_SINGLE_MSG_CHARS = (tokenLimit - 1000) * 4;
+    let trimmedMessages = messages.map(m => {
+        if (m.content && m.content.length > MAX_SINGLE_MSG_CHARS) {
+            return { ...m, content: m.content.substring(0, MAX_SINGLE_MSG_CHARS) + "\n\n[... documento truncado por límite del modelo ...]" };
+        }
+        return m;
+    });
+
+    // Recortar historial desde el inicio hasta entrar en el límite total
     while (trimmedMessages.length > 1) {
         const totalChars = trimmedMessages.reduce((sum, m) => sum + (m.content || "").length, 0)
             + systemPrompt.length;
         if (totalChars <= MAX_HISTORY_CHARS) break;
-        trimmedMessages.shift(); // elimina el mensaje más antiguo
+        trimmedMessages.shift();
     }
 
     res.setHeader("Content-Type", "text/event-stream");
@@ -476,22 +500,40 @@ app.post("/api/save", (req, res) => {
 });
 
 // Upload y extracción de texto de .doc/.docx
-app.post("/api/upload", upload.single("file"), async (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ error: "No se recibió ningún archivo" });
-    }
-    try {
-        const result = await mammoth.extractRawText({ path: req.file.path });
-        fs.unlinkSync(req.file.path); // eliminar archivo temporal
-        const text = result.value.trim();
-        if (!text) {
-            return res.status(422).json({ error: "No se pudo extraer texto del documento" });
+app.post("/api/upload", (req, res) => {
+    upload.single("file")(req, res, async (err) => {
+        if (err) {
+            if (err.code === "LIMIT_FILE_SIZE") {
+                return res.status(400).json({ error: "El archivo supera el límite de 10 MB" });
+            }
+            return res.status(400).json({ error: err.message });
         }
-        res.json({ text, filename: req.file.originalname });
-    } catch (err) {
-        try { fs.unlinkSync(req.file.path); } catch (_) { }
-        res.status(500).json({ error: `Error al procesar el archivo: ${err.message}` });
-    }
+        if (!req.file) {
+            return res.status(400).json({ error: "No se recibió ningún archivo" });
+        }
+        try {
+            let text = "";
+            if (req.file.originalname.match(/\.docx$/i)) {
+                const result = await mammoth.extractRawText({ path: req.file.path });
+                text = result.value.trim();
+            } else if (req.file.originalname.match(/\.doc$/i)) {
+                const extractor = new WordExtractor();
+                const doc = await extractor.extract(req.file.path);
+                text = doc.getBody().trim();
+            } else {
+                fs.unlinkSync(req.file.path);
+                return res.status(422).json({ error: "Solo se admiten archivos .doc y .docx" });
+            }
+            fs.unlinkSync(req.file.path);
+            if (!text) {
+                return res.status(422).json({ error: "No se pudo extraer texto del documento" });
+            }
+            res.json({ text, filename: req.file.originalname });
+        } catch (e) {
+            try { fs.unlinkSync(req.file.path); } catch (_) { }
+            res.status(500).json({ error: `Error al procesar el archivo: ${e.message}` });
+        }
+    });
 });
 
 // Cuota real de GitHub Models (vía headers de la API)
@@ -558,15 +600,329 @@ app.post("/api/save-json", (req, res) => {
     res.json({ ok: true, filename: safe });
 });
 
-// Listar outputs
+// Listar outputs (resumen)
 app.get("/api/outputs", (req, res) => {
     const outputsDir = path.join(__dirname, "outputs");
     try {
-        const files = fs.readdirSync(outputsDir).filter(f => f.endsWith(".md"));
+        const files = fs.readdirSync(outputsDir)
+            .filter(f => f.endsWith(".md") || f.endsWith(".json"))
+            .map(f => {
+                const stat = fs.statSync(path.join(outputsDir, f));
+                return { name: f, size: stat.size, modified: stat.mtime.toISOString() };
+            })
+            .sort((a, b) => new Date(b.modified) - new Date(a.modified));
         res.json({ files });
     } catch {
         res.json({ files: [] });
     }
+});
+
+// Obtener contenido de un output
+app.get("/api/outputs/:filename", (req, res) => {
+    const safe = path.basename(req.params.filename).replace(/[^a-zA-Z0-9\-_\.]/g, "_");
+    const filePath = path.join(__dirname, "outputs", safe);
+    if (!filePath.startsWith(path.join(__dirname, "outputs"))) return res.status(403).json({ error: "No permitido" });
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: "Archivo no encontrado" });
+    res.json({ content: fs.readFileSync(filePath, "utf8"), filename: safe });
+});
+
+// Eliminar un output
+app.delete("/api/outputs/:filename", (req, res) => {
+    const safe = path.basename(req.params.filename).replace(/[^a-zA-Z0-9\-_\.]/g, "_");
+    const filePath = path.join(__dirname, "outputs", safe);
+    if (!filePath.startsWith(path.join(__dirname, "outputs"))) return res.status(403).json({ error: "No permitido" });
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: "No encontrado" });
+    fs.unlinkSync(filePath);
+    res.json({ ok: true });
+});
+
+// ─── CONFIG / SETUP WIZARD ──────────────────────────────────────────────────
+
+const ENV_PATH = path.join(__dirname, ".env");
+const CONFIG_KEYS = ["GITHUB_TOKEN", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "JIRA_BASE_URL", "JIRA_EMAIL", "JIRA_TOKEN"];
+
+function readEnvFile() {
+    if (!fs.existsSync(ENV_PATH)) return {};
+    const lines = fs.readFileSync(ENV_PATH, "utf8").split(/\r?\n/);
+    const result = {};
+    for (const line of lines) {
+        const match = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/);
+        if (match) result[match[1]] = match[2].trim().replace(/^["']|["']$/g, "");
+    }
+    return result;
+}
+
+function writeEnvFile(configObj) {
+    const existing = readEnvFile();
+    const merged = { ...existing, ...configObj };
+    for (const k of Object.keys(merged)) {
+        if (merged[k] === "") delete merged[k];
+    }
+    const lines = Object.entries(merged).map(([k, v]) => `${k}=${v}`);
+    fs.writeFileSync(ENV_PATH, lines.join("\n") + "\n", "utf8");
+}
+
+app.get("/api/config", (req, res) => {
+    const env = readEnvFile();
+    const masked = {};
+    for (const key of CONFIG_KEYS) {
+        const val = env[key] || "";
+        masked[key] = val ? "***" + val.slice(-4) : "";
+    }
+    res.json({ config: masked, isConfigured: !!(env.GITHUB_TOKEN) });
+});
+
+app.post("/api/config", (req, res) => {
+    const { config } = req.body;
+    if (!config || typeof config !== "object") return res.status(400).json({ error: "config requerido" });
+    const sanitized = {};
+    for (const key of CONFIG_KEYS) {
+        if (config[key] !== undefined && !String(config[key]).includes("***")) {
+            sanitized[key] = String(config[key]).trim();
+        }
+    }
+    try {
+        writeEnvFile(sanitized);
+        for (const [k, v] of Object.entries(sanitized)) {
+            if (v) process.env[k] = v;
+        }
+        if (sanitized.GITHUB_TOKEN) client.apiKey = sanitized.GITHUB_TOKEN;
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ─── MCP MANAGEMENT ─────────────────────────────────────────────────────────
+
+const MCP_FILE = path.join(__dirname, ".vscode", "mcp.json");
+
+function readMcpFile() {
+    try {
+        if (fs.existsSync(MCP_FILE)) return JSON.parse(fs.readFileSync(MCP_FILE, "utf8"));
+    } catch (_) { }
+    return { servers: {} };
+}
+
+function writeMcpFile(data) {
+    const dir = path.dirname(MCP_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(MCP_FILE, JSON.stringify(data, null, 2), "utf8");
+}
+
+app.get("/api/mcp", (req, res) => { res.json(readMcpFile()); });
+
+app.post("/api/mcp", (req, res) => {
+    const { name, command, args, env: envVars } = req.body;
+    if (!name || !command) return res.status(400).json({ error: "name y command requeridos" });
+    const safeName = name.replace(/[^a-zA-Z0-9\-_]/g, "-");
+    const data = readMcpFile();
+    if (!data.servers) data.servers = {};
+    data.servers[safeName] = { command, args: Array.isArray(args) ? args : [], env: envVars || {} };
+    writeMcpFile(data);
+    res.json({ ok: true, servers: data.servers });
+});
+
+app.delete("/api/mcp/:name", (req, res) => {
+    const data = readMcpFile();
+    if (data.servers) delete data.servers[req.params.name];
+    writeMcpFile(data);
+    res.json({ ok: true, servers: data.servers || {} });
+});
+
+// ─── AGENT CRUD ──────────────────────────────────────────────────────────────
+
+app.post("/api/agents/create", (req, res) => {
+    const { id, name, description, icon, flow, hint, prompt, skills } = req.body;
+    if (!id || !name) return res.status(400).json({ error: "id y name son requeridos" });
+    const safeId = id.replace(/[^a-zA-Z0-9\-_]/g, "-").toLowerCase();
+    const agentDir = path.join(__dirname, "agents", safeId);
+    if (fs.existsSync(agentDir)) return res.status(409).json({ error: `Ya existe un agente con ID "${safeId}"` });
+    const skillsList = Array.isArray(skills) ? skills : [];
+    const skillsBlock = skillsList.length > 0 ? skillsList.map(s => `  - ${s}`).join("\n") : "  []";
+    const agentContent = `---\nname: ${name}\nid: ${safeId}\nversion: 1.0.0\ndescription: ${description || ""}\nicon: ${icon || "🤖"}\nflow: ${flow || ""}\nhint: ${hint || "Pegá el contenido del documento aquí."}\nskills:\n${skillsBlock}\n---\n\n${prompt || ""}\n`;
+    const promptContent = `---\nagent: ${safeId}\nversion: 1.0.0\n---\n${prompt || ""}\n`;
+    try {
+        fs.mkdirSync(agentDir, { recursive: true });
+        fs.mkdirSync(path.join(agentDir, "skills"), { recursive: true });
+        fs.writeFileSync(path.join(agentDir, `${safeId}.agent.md`), agentContent, "utf8");
+        fs.writeFileSync(path.join(agentDir, `${safeId}.prompt.md`), promptContent, "utf8");
+        res.json({ ok: true, agentId: safeId });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.put("/api/agents/:id", (req, res) => {
+    const safeId = path.basename(req.params.id).replace(/[^a-zA-Z0-9\-_]/g, "-");
+    const { name, description, icon, flow, hint, prompt, skills } = req.body;
+    const agentDir = path.join(__dirname, "agents", safeId);
+    if (!fs.existsSync(agentDir)) return res.status(404).json({ error: "Agente no encontrado" });
+    const skillsList = Array.isArray(skills) ? skills : [];
+    const skillsBlock = skillsList.length > 0 ? skillsList.map(s => `  - ${s}`).join("\n") : "  []";
+    const agentContent = `---\nname: ${name}\nid: ${safeId}\nversion: 1.0.0\ndescription: ${description || ""}\nicon: ${icon || "🤖"}\nflow: ${flow || ""}\nhint: ${hint || "Pegá el contenido del documento aquí."}\nskills:\n${skillsBlock}\n---\n\n${prompt || ""}\n`;
+    const promptContent = `---\nagent: ${safeId}\nversion: 1.0.0\n---\n${prompt || ""}\n`;
+    try {
+        fs.writeFileSync(path.join(agentDir, `${safeId}.agent.md`), agentContent, "utf8");
+        fs.writeFileSync(path.join(agentDir, `${safeId}.prompt.md`), promptContent, "utf8");
+        res.json({ ok: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete("/api/agents/:id", (req, res) => {
+    const safeId = path.basename(req.params.id).replace(/[^a-zA-Z0-9\-_]/g, "-");
+    const defaultAgents = new Set(["doc-interpreter", "testcase-general", "testcase-gherkin", "playwright-agent"]);
+    if (defaultAgents.has(safeId)) return res.status(403).json({ error: "No se pueden eliminar los agentes predeterminados" });
+    const agentDir = path.join(__dirname, "agents", safeId);
+    if (!fs.existsSync(agentDir)) return res.status(404).json({ error: "Agente no encontrado" });
+    try {
+        fs.rmSync(agentDir, { recursive: true, force: true });
+        res.json({ ok: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ─── IMPORT FROM GITHUB ──────────────────────────────────────────────────────
+
+app.post("/api/agents/import-github", async (req, res) => {
+    const { repoUrl, token } = req.body;
+    if (!repoUrl) return res.status(400).json({ error: "repoUrl requerido" });
+    const urlMatch = repoUrl.trim().match(/github\.com\/([^\/]+)\/([^\/\?#]+)(?:\/tree\/([^\/]+)\/?(.*))?/);
+    if (!urlMatch) return res.status(400).json({ error: "URL de GitHub inválida. Formato: https://github.com/owner/repo o https://github.com/owner/repo/tree/main/carpeta" });
+    const owner = urlMatch[1];
+    const repo = urlMatch[2].replace(/\.git$/, "");
+    const branch = urlMatch[3] || "main";
+    const subdir = (urlMatch[4] || "").replace(/\/$/, "");
+    const headers = { "Accept": "application/vnd.github.v3+json", "User-Agent": "MissionControl/2.0" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    try {
+        const apiPath = subdir ? `${subdir}/` : "";
+        const dirRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${apiPath}?ref=${branch}`, { headers });
+        if (!dirRes.ok) {
+            if (dirRes.status === 404) return res.status(404).json({ error: "Repo o ruta no encontrada. ¿Es público? ¿Existe la rama/carpeta?" });
+            if (dirRes.status === 401 || dirRes.status === 403) return res.status(403).json({ error: "Token inválido o sin permisos sobre este repositorio." });
+            return res.status(dirRes.status).json({ error: `GitHub API error: ${dirRes.status}` });
+        }
+        const files = await dirRes.json();
+        if (!Array.isArray(files)) return res.status(400).json({ error: "La URL no apunta a una carpeta con archivos de agente." });
+        const agentFile = files.find(f => f.name.endsWith(".agent.md") && f.type === "file");
+        if (!agentFile) return res.status(400).json({ error: "No se encontró ningún .agent.md en la ruta especificada." });
+        const agentContent = await (await fetch(agentFile.download_url, { headers })).text();
+        const idMatch = agentContent.match(/^id:\s*(.+)$/m);
+        const agentId = (idMatch ? idMatch[1].trim() : agentFile.name.replace(/\.agent\.md$/, "")).replace(/[^a-zA-Z0-9\-_]/g, "-");
+        const localAgentDir = path.join(__dirname, "agents", agentId);
+        if (fs.existsSync(localAgentDir)) return res.status(409).json({ error: `Ya existe un agente con ID "${agentId}". Eliminalo primero.` });
+        fs.mkdirSync(localAgentDir, { recursive: true });
+        fs.mkdirSync(path.join(localAgentDir, "skills"), { recursive: true });
+        fs.writeFileSync(path.join(localAgentDir, `${agentId}.agent.md`), agentContent, "utf8");
+        const promptFile = files.find(f => f.name.endsWith(".prompt.md") && f.type === "file");
+        if (promptFile) {
+            const txt = await (await fetch(promptFile.download_url, { headers })).text();
+            fs.writeFileSync(path.join(localAgentDir, `${agentId}.prompt.md`), txt, "utf8");
+        }
+        const skillsDirEntry = files.find(f => f.name === "skills" && f.type === "dir");
+        if (skillsDirEntry) {
+            const skillsRes = await fetch(skillsDirEntry.url, { headers });
+            if (skillsRes.ok) {
+                const skillFiles = await skillsRes.json();
+                for (const sf of (skillFiles || []).filter(f => f.name.endsWith(".skill.md"))) {
+                    const txt = await (await fetch(sf.download_url, { headers })).text();
+                    fs.writeFileSync(path.join(localAgentDir, "skills", sf.name.replace(/[^a-zA-Z0-9\-_.]/g, "_")), txt, "utf8");
+                }
+            }
+        }
+        res.json({ ok: true, agentId, message: `Agente "${agentId}" importado exitosamente desde GitHub.` });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ─── JIRA INTEGRATION ────────────────────────────────────────────────────────
+
+function getJiraHeaders() {
+    const email = process.env.JIRA_EMAIL;
+    const token = process.env.JIRA_TOKEN;
+    if (!email || !token) return null;
+    const auth = Buffer.from(`${email}:${token}`).toString("base64");
+    return { "Authorization": `Basic ${auth}`, "Content-Type": "application/json", "Accept": "application/json" };
+}
+
+app.get("/api/jira/test", async (req, res) => {
+    const baseUrl = (process.env.JIRA_BASE_URL || "").replace(/\/$/, "");
+    const headers = getJiraHeaders();
+    if (!baseUrl || !headers) return res.status(400).json({ error: "Jira no configurado. Completá JIRA_BASE_URL, JIRA_EMAIL y JIRA_TOKEN en ⚙️ Configuración." });
+    try {
+        const r = await fetch(`${baseUrl}/rest/api/3/myself`, { headers });
+        if (!r.ok) return res.status(r.status).json({ error: `Jira respondió ${r.status}. Verificá las credenciales.` });
+        const user = await r.json();
+        res.json({ ok: true, displayName: user.displayName, email: user.emailAddress });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get("/api/jira/projects", async (req, res) => {
+    const baseUrl = (process.env.JIRA_BASE_URL || "").replace(/\/$/, "");
+    const headers = getJiraHeaders();
+    if (!baseUrl || !headers) return res.status(400).json({ error: "Jira no configurado" });
+    try {
+        const r = await fetch(`${baseUrl}/rest/api/3/project/search?maxResults=50`, { headers });
+        if (!r.ok) return res.status(r.status).json({ error: `Jira respondió ${r.status}` });
+        const data = await r.json();
+        res.json({ projects: (data.values || []).map(p => ({ id: p.id, key: p.key, name: p.name })) });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get("/api/jira/issues", async (req, res) => {
+    const baseUrl = (process.env.JIRA_BASE_URL || "").replace(/\/$/, "");
+    const headers = getJiraHeaders();
+    if (!baseUrl || !headers) return res.status(400).json({ error: "Jira no configurado" });
+    const jql = req.query.jql || "assignee = currentUser() ORDER BY updated DESC";
+    const maxResults = Math.min(parseInt(req.query.maxResults) || 20, 50);
+    try {
+        const body = JSON.stringify({ jql, maxResults, fields: ["summary", "status", "assignee", "issuetype", "priority", "description"] });
+        const r = await fetch(`${baseUrl}/rest/api/3/search`, { method: "POST", headers, body });
+        if (!r.ok) return res.status(r.status).json({ error: `Jira respondió ${r.status}` });
+        const data = await r.json();
+        const issues = (data.issues || []).map(i => ({
+            key: i.key, summary: i.fields.summary,
+            status: i.fields.status?.name, type: i.fields.issuetype?.name,
+            priority: i.fields.priority?.name,
+            description: i.fields.description?.content?.[0]?.content?.[0]?.text || "",
+        }));
+        res.json({ issues, total: data.total });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post("/api/jira/comment", async (req, res) => {
+    const { issueKey, comment } = req.body;
+    const baseUrl = (process.env.JIRA_BASE_URL || "").replace(/\/$/, "");
+    const headers = getJiraHeaders();
+    if (!baseUrl || !headers) return res.status(400).json({ error: "Jira no configurado" });
+    if (!issueKey || !comment) return res.status(400).json({ error: "issueKey y comment requeridos" });
+    try {
+        const body = JSON.stringify({ body: { type: "doc", version: 1, content: [{ type: "paragraph", content: [{ type: "text", text: comment }] }] } });
+        const r = await fetch(`${baseUrl}/rest/api/3/issue/${issueKey}/comment`, { method: "POST", headers, body });
+        if (!r.ok) return res.status(r.status).json({ error: `Jira respondió ${r.status}` });
+        res.json({ ok: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post("/api/jira/bug", async (req, res) => {
+    const { projectKey, summary, description } = req.body;
+    const baseUrl = (process.env.JIRA_BASE_URL || "").replace(/\/$/, "");
+    const headers = getJiraHeaders();
+    if (!baseUrl || !headers) return res.status(400).json({ error: "Jira no configurado" });
+    if (!projectKey || !summary) return res.status(400).json({ error: "projectKey y summary requeridos" });
+    try {
+        const body = JSON.stringify({
+            fields: {
+                project: { key: projectKey }, summary,
+                description: { type: "doc", version: 1, content: [{ type: "paragraph", content: [{ type: "text", text: description || "" }] }] },
+                issuetype: { name: "Bug" },
+            }
+        });
+        const r = await fetch(`${baseUrl}/rest/api/3/issue`, { method: "POST", headers, body });
+        if (!r.ok) {
+            const errText = await r.text();
+            return res.status(r.status).json({ error: `Jira error ${r.status}: ${errText.slice(0, 200)}` });
+        }
+        const data = await r.json();
+        res.json({ ok: true, key: data.key, url: `${baseUrl}/browse/${data.key}` });
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 const PORT = 3000;
